@@ -1,6 +1,8 @@
 This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 
-Terabox API/Base Code [**HERE**](https://t.me/Privates_Bots/7212)
+Terabox API/Base Code [**HERE**](https://t.me/Privates_Bots/7212).
+
+<b><u>Heroku Video Guide <a href='https://lord2tb.hrishithombare26.workers.dev/0:findpath?id=1lSX2bCtaf865o1412ai2qA19fgAH_MNx&view=true'>Here</a></u></b>.
 
 <b>Fill this Values in <a href='https://github.com/Hrishi2861/Terabox-Downloader-Bot/blob/main/config.env'>config.env</a></b>
 - `BOT_TOKEN`: The Telegram Bot Token that you got from [@BotFather](https://t.me/BotFather). `Str`
