@@ -11,7 +11,7 @@ Terabox API/Base Code [**HERE**](https://t.me/Privates_Bots/7212).
 - [![Deploy on Render](https://render.com/images/deploy-to-render-button.svg)](https://youtu.be/GC21_UpDHlY)
 ---
 
-<b>Fill this Values in <a href='https://github.com/Hrishi2861/Terabox-Downloader-Bot/blob/main/config.env'>config.env</a></b>
+<b>Fill this Values in [config.env](config.env)</b>
 - `BOT_TOKEN`: The Telegram Bot Token that you got from [@BotFather](https://t.me/BotFather). `Str`
 - `TELEGRAM_API`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Int`
 - `TELEGRAM_HASH`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Str`
