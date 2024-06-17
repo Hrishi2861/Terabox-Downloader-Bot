@@ -4,9 +4,11 @@ Terabox API/Base Code [**HERE**](https://t.me/Privates_Bots/7212).
 
 ---
 ### <b>Video Guides</b>
-- [![Deploy on Heroku](https://www.herokucdn.com/deploy/button.svg)](https://index.jetmirror.xyz/0:findpath?id=1a-CWPnONLLaaCXTiux3E2sZQeyxns-7Q&view=true)
+- [![Deploy on Heroku](https://www.herokucdn.com/deploy/button.svg)](https://youtu.be/rTZ3QnuxQMA)
 
-- [![Deploy on Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://index.jetmirror.xyz/0:findpath?id=1_DsA6NhjUc_n9YORE2iFVMWCcj9RcLJr&view=true)
+- [![Deploy on Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://youtu.be/b5lVc6Gt5pw)
+
+- [![Deploy on Render](https://render.com/images/deploy-to-render-button.svg)](https://youtu.be/GC21_UpDHlY)
 ---
 
 <b>Fill this Values in <a href='https://github.com/Hrishi2861/Terabox-Downloader-Bot/blob/main/config.env'>config.env</a></b>
