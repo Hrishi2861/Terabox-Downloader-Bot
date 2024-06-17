@@ -133,3 +133,8 @@ sudo docker-compose start
 ```
 sudo docker-compose up
 ```
+
+---
+## If anyone want requirements.txt to run without Docker, access it <a href='https://gist.github.com/Hrishi2861/423aaf4893170f113bd96e59e1d7049a'>Here</a>.
+
+Cmd to start the Bot: bash start.sh
