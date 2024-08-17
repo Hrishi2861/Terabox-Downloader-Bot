@@ -5,7 +5,7 @@ from status import format_progress_bar
 import asyncio
 import os, time
 import logging
-
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 aria2 = aria2p.API(
     aria2p.Client(
@@ -14,6 +14,15 @@ aria2 = aria2p.API(
         secret=""
     )
 )
+options = {
+    "max-tries": "50",
+    "retry-wait": "3",
+    "continue": "true"
+}
+
+aria2.set_global_options(options)
+
+
 async def download_video(url, reply_msg, user_mention, user_id):
     response = requests.get(f"https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url={url}")
     response.raise_for_status()
@@ -21,49 +30,114 @@ async def download_video(url, reply_msg, user_mention, user_id):
 
     resolutions = data["response"][0]["resolutions"]
     fast_download_link = resolutions["Fast Download"]
+    hd_download_link = resolutions["HD Video"]
     thumbnail_url = data["response"][0]["thumbnail"]
     video_title = data["response"][0]["title"]
 
-    download = aria2.add_uris([fast_download_link])
-    start_time = datetime.now()
+    try:
+        download = aria2.add_uris([fast_download_link])
+        start_time = datetime.now()
 
-    while not download.is_complete:
-        download.update()
-        percentage = download.progress
-        done = download.completed_length
-        total_size = download.total_length
-        speed = download.download_speed
-        eta = download.eta
-        elapsed_time_seconds = (datetime.now() - start_time).total_seconds()
-        progress_text = format_progress_bar(
-            filename=video_title,
-            percentage=percentage,
-            done=done,
-            total_size=total_size,
-            status="Downloading",
-            eta=eta,
-            speed=speed,
-            elapsed=elapsed_time_seconds,
-            user_mention=user_mention,
-            user_id=user_id,
-            aria2p_gid=download.gid
+        while not download.is_complete:
+            download.update()
+            percentage = download.progress
+            done = download.completed_length
+            total_size = download.total_length
+            speed = download.download_speed
+            eta = download.eta
+            elapsed_time_seconds = (datetime.now() - start_time).total_seconds()
+            progress_text = format_progress_bar(
+                filename=video_title,
+                percentage=percentage,
+                done=done,
+                total_size=total_size,
+                status="Downloading",
+                eta=eta,
+                speed=speed,
+                elapsed=elapsed_time_seconds,
+                user_mention=user_mention,
+                user_id=user_id,
+                aria2p_gid=download.gid
+            )
+            await reply_msg.edit_text(progress_text)
+            await asyncio.sleep(2)
+
+        if download.is_complete:
+            file_path = download.files[0].path
+
+            thumbnail_path = "thumbnail.jpg"
+            thumbnail_response = requests.get(thumbnail_url)
+            with open(thumbnail_path, "wb") as thumb_file:
+                thumb_file.write(thumbnail_response.content)
+
+            await reply_msg.edit_text("ᴜᴘʟᴏᴀᴅɪɴɢ...")
+
+            return file_path, thumbnail_path, video_title
+    except Exception as e:
+        logging.error(f"Error handling message: {e}")
+        buttons = [
+            [InlineKeyboardButton("🚀 HD Video", url=hd_download_link)],
+            [InlineKeyboardButton("⚡ Fast Download", url=fast_download_link)]
+        ]
+        reply_markup = InlineKeyboardMarkup(buttons)
+        await reply_msg.reply_text(
+            "Fast Download Link For this Video is Broken, Download manually using the Link Below.",
+            reply_markup=reply_markup
         )
-        await reply_msg.edit_text(progress_text)
-        await asyncio.sleep(2)
+        return None, None, None
 
-    if download.is_complete:
-        file_path = download.files[0].path
+# async def download_video(url, reply_msg, user_mention, user_id):
+#     response = requests.get(f"https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url={url}")
+#     response.raise_for_status()
+#     data = response.json()
 
-        thumbnail_path = "thumbnail.jpg"
-        thumbnail_response = requests.get(thumbnail_url)
-        with open(thumbnail_path, "wb") as thumb_file:
-            thumb_file.write(thumbnail_response.content)
+#     resolutions = data["response"][0]["resolutions"]
+#     fast_download_link = resolutions["Fast Download"]
+#     hd_download_link = resolutions["HD Video"]
+#     thumbnail_url = data["response"][0]["thumbnail"]
+#     video_title = data["response"][0]["title"]
 
-        await reply_msg.edit_text("ᴜᴘʟᴏᴀᴅɪɴɢ...")
+#     download = aria2.add_uris([fast_download_link])
+#     start_time = datetime.now()
 
-        return file_path, thumbnail_path, video_title
-    else:
-        raise Exception("Download failed")
+#     while not download.is_complete:
+#         download.update()
+#         percentage = download.progress
+#         done = download.completed_length
+#         total_size = download.total_length
+#         speed = download.download_speed
+#         eta = download.eta
+#         elapsed_time_seconds = (datetime.now() - start_time).total_seconds()
+#         progress_text = format_progress_bar(
+#             filename=video_title,
+#             percentage=percentage,
+#             done=done,
+#             total_size=total_size,
+#             status="Downloading",
+#             eta=eta,
+#             speed=speed,
+#             elapsed=elapsed_time_seconds,
+#             user_mention=user_mention,
+#             user_id=user_id,
+#             aria2p_gid=download.gid
+#         )
+#         await reply_msg.edit_text(progress_text)
+#         await asyncio.sleep(2)
+
+#     if download.is_complete:
+#         file_path = download.files[0].path
+
+#         thumbnail_path = "thumbnail.jpg"
+#         thumbnail_response = requests.get(thumbnail_url)
+#         with open(thumbnail_path, "wb") as thumb_file:
+#             thumb_file.write(thumbnail_response.content)
+
+#         await reply_msg.edit_text("ᴜᴘʟᴏᴀᴅɪɴɢ...")
+
+#         return file_path, thumbnail_path, video_title
+#     else:
+#         return markup
+
 
 async def upload_video(client, file_path, thumbnail_path, video_title, reply_msg, collection_channel_id, user_mention, user_id, message):
     file_size = os.path.getsize(file_path)
@@ -112,10 +186,11 @@ async def upload_video(client, file_path, thumbnail_path, video_title, reply_msg
         )
         await asyncio.sleep(1)
         await message.delete()
-        await message.reply_sticker("CAACAgIAAxkBAAEZdwRmJhCNfFRnXwR_lVKU1L9F3qzbtAAC4gUAAj-VzApzZV-v3phk4DQE")
 
     await reply_msg.delete()
-
+    sticker_message = await message.reply_sticker("CAACAgIAAxkBAAEZdwRmJhCNfFRnXwR_lVKU1L9F3qzbtAAC4gUAAj-VzApzZV-v3phk4DQE")
     os.remove(file_path)
     os.remove(thumbnail_path)
+    await asyncio.sleep(5)
+    await sticker_message.delete()
     return collection_message.id
