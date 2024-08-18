@@ -57,7 +57,7 @@ async def start_command(client, message):
     developer_button = InlineKeyboardButton("ᴅᴇᴠᴇʟᴏᴘᴇʀ ⚡️", url="https://t.me/hrishikesh2861")
     reply_markup = InlineKeyboardMarkup([[join_button, developer_button]])
     video_file_id = "/app/Jet-Mirror.mp4"
-    if os.path.exists(video_file_path):
+    if os.path.exists(video_file_id):
         await client.send_video(
             chat_id=message.chat.id,
             video=video_file_path,
