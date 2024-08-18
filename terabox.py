@@ -60,7 +60,7 @@ async def start_command(client, message):
     if os.path.exists(video_file_id):
         await client.send_video(
             chat_id=message.chat.id,
-            video=video_file_path,
+            video=video_file_id,
             caption=reply_message,
             reply_markup=reply_markup
         )
