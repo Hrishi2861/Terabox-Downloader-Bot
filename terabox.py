@@ -95,8 +95,15 @@ async def handle_message(client, message: Message):
         await message.reply_text("ʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴍʏ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴜsᴇ ᴍᴇ.", reply_markup=reply_markup)
         return
 
+    valid_domains = [
+    'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
+    'momerybox.com', 'teraboxapp.com', '1024tera.com', 
+    'terabox.app', 'gibibox.com', 'goaibox.com', 'terasharelink.com'
+    ]
+
     terabox_link = message.text.strip()
-    if "terabox" not in terabox_link:
+
+    if not any(domain in terabox_link for domain in valid_domains):
         await message.reply_text("ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ᴛᴇʀᴀʙᴏx ʟɪɴᴋ.")
         return
 
