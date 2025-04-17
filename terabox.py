@@ -15,7 +15,7 @@ import uuid
 import urllib.parse
 from urllib.parse import urlparse
 import requests
-from flask import Flask
+from flask import Flask, render_template
 from threading import Thread
 import os
 
