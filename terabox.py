@@ -8,14 +8,16 @@ import math
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatMemberStatus
-from pyrogram.errors import FloodWait, MessageDeleteForbidden
+from pyrogram.errors import FloodWait
 from pymongo import MongoClient
 import time
-import threading
 import uuid
 import urllib.parse
 from urllib.parse import urlparse
 import requests
+from flask import Flask
+from threading import Thread
+import os
 
 load_dotenv('config.env', override=True)
 logging.basicConfig(
@@ -83,8 +85,9 @@ if len(DATABASE_URL) == 0:
 
 SHORTENER_API = os.environ.get('SHORTENER_API', '')
 if len(SHORTENER_API) == 0:
-    logging.error("SHORTENER_API variable is missing! Exiting now")
-    exit(1)
+    logging.info("SHORTENER_API variable is missing!")
+    SHORTENER_API = None
+
 
 USER_SESSION_STRING = os.environ.get('USER_SESSION_STRING', '')
 if len(USER_SESSION_STRING) == 0:
@@ -152,12 +155,14 @@ def shorten_url(url):
         data = response.json()
         if data.get("status") == "success":
             return data.get("shortenedUrl")
+        elif SHORTENER_API is None:
+            return url
         else:
             logger.error(f"Failed to shorten URL: {data}")
-            return None
+            return url
     except Exception as e:
         logger.error(f"Error shortening URL: {e}")
-        return None
+        return url
 
 def generate_uuid(user_id):
     token = str(uuid.uuid4())
@@ -262,7 +267,6 @@ async def handle_message(client: Client, message: Message):
     if message.text.startswith('/'):
         return
     if not message.from_user:
-        #logging.warning("Message is not from a user. Ignoring.")
         return
 
     user_id = message.from_user.id
@@ -300,7 +304,7 @@ async def handle_message(client: Client, message: Message):
     start_time = datetime.now()
 
     while not download.is_complete:
-        await asyncio.sleep(5)
+        await asyncio.sleep(15)
         download.update()
         progress = download.progress
 
@@ -334,7 +338,7 @@ async def handle_message(client: Client, message: Message):
     )
 
     last_update_time = time.time()
-    UPDATE_INTERVAL = 5
+    UPDATE_INTERVAL = 15
 
     async def update_status(message, text):
         nonlocal last_update_time
@@ -506,7 +510,19 @@ async def handle_message(client: Client, message: Message):
         await message.delete()
     except Exception as e:
         logger.error(f"Cleanup error: {e}")
-        
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def home():
+    return "Bot is running"
+
+def run_flask():
+    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+def keep_alive():
+    Thread(target=run_flask).start()
+
 async def start_user_client():
     if user:
         await user.start()
@@ -518,11 +534,11 @@ def run_user():
     loop.run_until_complete(start_user_client())
 
 if __name__ == "__main__":
+    keep_alive()
+
     if user:
-        logger.info("Starting both bot and user clients...")
-        user_thread = threading.Thread(target=run_user)
-        user_thread.start()
+        logger.info("Starting user client...")
+        Thread(target=run_user).start()
 
     logger.info("Starting bot client...")
-    logger.info("Bot client Started...")
     app.run()
