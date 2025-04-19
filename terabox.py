@@ -1,7 +1,7 @@
 from aria2p import API as Aria2API, Client as Aria2Client
 import asyncio
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import logging
 import math
@@ -9,15 +9,11 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import FloodWait
-from pymongo import MongoClient
 import time
-import uuid
 import urllib.parse
 from urllib.parse import urlparse
-import requests
 from flask import Flask, render_template
 from threading import Thread
-import os
 
 load_dotenv('config.env', override=True)
 logging.basicConfig(
@@ -78,28 +74,10 @@ if len(FSUB_ID) == 0:
 else:
     FSUB_ID = int(FSUB_ID)
 
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
-if len(DATABASE_URL) == 0:
-    logging.error("DATABASE_URL variable is missing! Exiting now")
-    exit(1)
-
-SHORTENER_API = os.environ.get('SHORTENER_API', '')
-if len(SHORTENER_API) == 0:
-    logging.info("SHORTENER_API variable is missing!")
-    SHORTENER_API = None
-
-
 USER_SESSION_STRING = os.environ.get('USER_SESSION_STRING', '')
 if len(USER_SESSION_STRING) == 0:
     logging.info("USER_SESSION_STRING variable is missing! Bot will split Files in 2Gb...")
     USER_SESSION_STRING = None
-
-DATABASE_NAME = "terabox"
-COLLECTION_NAME = "user_requests"
-
-client = MongoClient(DATABASE_URL)
-db = client[DATABASE_NAME]
-collection = db[COLLECTION_NAME]
 
 app = Client("jetbot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
@@ -142,119 +120,24 @@ def format_size(size):
     else:
         return f"{size / (1024 * 1024 * 1024):.2f} GB"
 
-def shorten_url(url):
-    #You can change api_url with your choice shortener
-    api_url = "https://api.modijiurl.com/api"
-    params = {
-        "api": SHORTENER_API,
-        "url": url
-    }
-    try:
-        response = requests.get(api_url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("status") == "success":
-            return data.get("shortenedUrl")
-        elif SHORTENER_API is None:
-            return url
-        else:
-            logger.error(f"Failed to shorten URL: {data}")
-            return url
-    except Exception as e:
-        logger.error(f"Error shortening URL: {e}")
-        return url
-
-def generate_uuid(user_id):
-    token = str(uuid.uuid4())
-    collection.update_one(
-        {"user_id": user_id},
-        {"$set": {"token": token, "token_status": "inactive", "token_expiry": None}},
-        upsert=True
-    )
-    return token
-
-def activate_token(user_id, token):
-    user_data = collection.find_one({"user_id": user_id, "token": token})
-    if user_data:
-        collection.update_one(
-            {"user_id": user_id, "token": token},
-            {"$set": {"token_status": "active", "token_expiry": datetime.now() + timedelta(hours=12)}}
-        )
-        return True
-    return False
-
-def has_valid_token(user_id):
-    user_data = collection.find_one({"user_id": user_id})
-    if user_data and user_data.get("token_status") == "active":
-        if datetime.now() < user_data.get("token_expiry"):
-            return True
-    return False
-
 @app.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
     join_button = InlineKeyboardButton("ᴊᴏɪɴ ❤️🚀", url="https://t.me/jetmirror")
     developer_button = InlineKeyboardButton("ᴅᴇᴠᴇʟᴏᴘᴇʀ ⚡️", url="https://t.me/rtx5069")
     repo69 = InlineKeyboardButton("ʀᴇᴘᴏ 🌐", url="https://github.com/Hrishi2861/Terabox-Downloader-Bot")
+    user_mention = message.from_user.mention
     reply_markup = InlineKeyboardMarkup([[join_button, developer_button], [repo69]])
-    final_msg = "🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nYou already have a valid token!"
+    final_msg = f"ᴡᴇʟᴄᴏᴍᴇ, {user_mention}.\n\n🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ. sᴇɴᴅ ᴍᴇ ᴀɴʏ ᴛᴇʀᴀʙᴏx ʟɪɴᴋ ɪ ᴡɪʟʟ ᴅᴏᴡɴʟᴏᴀᴅ ᴡɪᴛʜɪɴ ғᴇᴡ sᴇᴄᴏɴᴅs ᴀɴᴅ sᴇɴᴅ ɪᴛ ᴛᴏ ʏᴏᴜ ✨."
     video_file_id = "/app/Jet-Mirror.mp4"
-    if len(message.command) > 1 and len(message.command[1]) == 36:
-        token = message.command[1]
-        user_id = message.from_user.id
-
-        if activate_token(user_id, token):
-            if os.path.exists(video_file_id):
-                await client.send_video(
-                    chat_id=message.chat.id,
-                    video=video_file_id,
-                    caption="🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nYour token has been activated successfully! You can now use the bot.",
-                    reply_markup=reply_markup
-                    )
-            else:
-                await message.reply_text("🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nYour token has been activated successfully! You can now use the bot.", reply_markup=reply_markup)
-        else:
-            if os.path.exists(video_file_id):
-                await client.send_video(
-                    chat_id=message.chat.id,
-                    video=video_file_id,
-                    caption="🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nInvalid token. Please generate a new one using /start.",
-                    reply_markup=reply_markup
-                    )
-            else:
-                await message.reply_text("🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nInvalid token. Please generate a new one using /start.", reply_markup=reply_markup)
+    if os.path.exists(video_file_id):
+        await client.send_video(
+            chat_id=message.chat.id,
+            video=video_file_id,
+            caption=final_msg,
+            reply_markup=reply_markup
+            )
     else:
-        user_id = message.from_user.id
-        if not has_valid_token(user_id):
-            token = generate_uuid(user_id)
-            long_url = f"https://redirect.jet-mirror.in/{app.me.username}/{token}"
-            short_url = shorten_url(long_url)
-            if short_url:
-                reply_markup2 = InlineKeyboardMarkup([[InlineKeyboardButton("Generate Token Link", url=short_url)], [join_button, developer_button], [repo69]])
-                if os.path.exists(video_file_id):
-                    await client.send_video(
-                    chat_id=message.chat.id,
-                    video=video_file_id,
-                    caption="🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\nPlease generate your Token, which will be valid for 12Hrs.",
-                    reply_markup=reply_markup2
-                    )
-                else:
-                    await message.reply_text(
-                    "🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ.\n\n"
-                    "Please generate your Token, which will be valid for 12Hrs.",
-                    reply_markup=reply_markup2
-                )
-            else:
-                await message.reply_text("Failed to generate the final link. Please try again.")
-        else:
-            if os.path.exists(video_file_id):
-                await client.send_video(
-                    chat_id=message.chat.id,
-                    video=video_file_id,
-                    caption=final_msg,
-                    reply_markup=reply_markup
-                    )
-            else:
-                await message.reply_text(final_msg, reply_markup=reply_markup)
+        await message.reply_text(final_msg, reply_markup=reply_markup)
 
 async def update_status_message(status_message, text):
     try:
@@ -276,13 +159,6 @@ async def handle_message(client: Client, message: Message):
         join_button = InlineKeyboardButton("ᴊᴏɪɴ ❤️🚀", url="https://t.me/jetmirror")
         reply_markup = InlineKeyboardMarkup([[join_button]])
         await message.reply_text("ʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴍʏ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴜsᴇ ᴍᴇ.", reply_markup=reply_markup)
-        return
-
-    if not has_valid_token(user_id):
-        await message.reply_text(
-            "Your token has expired or you haven't generated one yet.\n"
-            "Please generate a new token using /start."
-        )
         return
     
     url = None

@@ -8,8 +8,6 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - `TELEGRAM_HASH`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Str`
 - `FSUB_ID`: The Force Subscribe Channel, users will not be able to use your bot without joining the Channel. (Enter the Channel/Group ID starting with -100). `Int`
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
-- `DATABASE_URL`: MongoDB Connection String. Get it from [Here](https://mongodb.com). `Str`
-- `SHORTENER_API`: Your Shortener API for Ad Revenue. `Str`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
 
 ---
