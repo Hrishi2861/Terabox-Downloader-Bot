@@ -88,10 +88,10 @@ if USER_SESSION_STRING:
     SPLIT_SIZE = 4241280205
 
 VALID_DOMAINS = [
-    'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
-    'momerybox.com', 'teraboxapp.com', '1024tera.com', 
-    'terabox.app', 'gibibox.com', 'goaibox.com', 'terasharelink.com', 
-    'teraboxlink.com', 'terafileshare.com'
+    'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com',
+    'momerybox.com', 'teraboxapp.com', '1024tera.com', 'terabox.app',
+    'gibibox.com', 'goaibox.com', 'terasharelink.com', 'freeterabox.com', 
+    '1024terabox.com', 'teraboxshare.com', 'teraboxlink.com', 'terafileshare.com'
 ]
 last_update_time = 0
 
