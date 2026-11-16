@@ -989,9 +989,18 @@ async def handle_pending_input(client, message, pending):
             else:
                 source = thumb_path
             sent = await client.send_photo(DUMP_CHAT_ID, source)
-            set_user_setting(uid, thumbnail_file_id=sent.photo.file_id)
+            thumb_file_id = sent.photo.file_id
+            try:
+                await sent.delete()
+            except Exception as e:
+                logger.warning(f"Could not delete temporary thumbnail copy: {e}")
+            set_user_setting(uid, thumbnail_file_id=thumb_file_id)
             pending_inputs.pop(uid, None)
             await message.reply_text(t(uid, "thumb_set_done"))
+            try:
+                await message.delete()
+            except Exception as e:
+                logger.warning(f"Could not delete thumbnail photo message: {e}")
             if session:
                 session["last_activity"] = time.time()
                 try:
