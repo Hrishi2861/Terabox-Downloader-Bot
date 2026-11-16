@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+
+# Local credentials and Telegram session data
+config.env
+.env
+*.session
+*.session-journal
+
+# Runtime download artifacts
+*.aria2

@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  app:
+    container_name: jet-terabox
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash start.sh
+    restart: on-failure
+    ports:
+      - "83:83"
+      - "8383:8383"
