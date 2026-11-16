@@ -135,6 +135,7 @@ SEARCH_PAGE_SIZE = 5
 SEARCH_SESSION_TTL = 60
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DUMP_DONATION_IMAGE = os.path.join(BASE_DIR, "Pay-QR", "Donation.jpg")
 DUMP_QR_FILES = {
     "binance": os.path.join(BASE_DIR, "Pay-QR", "Binance.jpg"),
     "upi": os.path.join(BASE_DIR, "Pay-QR", "upi.jpg")
@@ -436,6 +437,11 @@ async def dump_access(client: Client, message: Message):
     if not message.from_user:
         return
 
+    if not os.path.exists(DUMP_DONATION_IMAGE):
+        logger.error(f"Donation image not found: {DUMP_DONATION_IMAGE}")
+        await message.reply_text("Dump access information is temporarily unavailable.")
+        return
+
     payment_buttons = InlineKeyboardMarkup([[
         InlineKeyboardButton(
             "Binance • 1.5 USDT",
@@ -446,15 +452,21 @@ async def dump_access(client: Client, message: Message):
             callback_data=f"dump:upi:{message.from_user.id}"
         )
     ]])
-    await message.reply_text(
+    caption = (
         "💾 Permanent Dump Channel Access\n\n"
         "Buy permanent access to the whole dump channel.\n\n"
         "• Binance: 1.5 USDT only\n"
         "• UPI: ₹200 only\n\n"
         "Choose your payment method below. After paying, send the payment "
-        "screenshot to @rtx5069 for verification.",
+        "screenshot to @rtx5069 for verification."
+    )
+    await client.send_photo(
+        message.chat.id,
+        DUMP_DONATION_IMAGE,
+        caption=caption,
         reply_markup=payment_buttons,
-        parse_mode=None
+        parse_mode=None,
+        reply_to_message_id=message.id
     )
 
 @app.on_callback_query(filters.regex(r"^dump:"))
