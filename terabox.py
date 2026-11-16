@@ -132,7 +132,13 @@ COOLDOWN_SECONDS = 90
 
 search_sessions = {}
 SEARCH_PAGE_SIZE = 5
-SEARCH_SESSION_TTL = 1800
+SEARCH_SESSION_TTL = 60
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DUMP_QR_FILES = {
+    "binance": os.path.join(BASE_DIR, "Pay-QR", "Binance.jpg"),
+    "upi": os.path.join(BASE_DIR, "Pay-QR", "upi.jpg")
+}
 
 VALID_DOMAINS = [
     'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
@@ -207,18 +213,26 @@ def build_search_query(keywords):
         ]
     }
 
-def cleanup_search_sessions():
-    cutoff = time.time() - SEARCH_SESSION_TTL
-    expired_tokens = [
-        token for token, session in search_sessions.items()
-        if session["created_at"] < cutoff
-    ]
-    for token in expired_tokens:
-        search_sessions.pop(token, None)
-
 def get_search_session(token):
-    cleanup_search_sessions()
     return search_sessions.get(token)
+
+async def expire_search_session(token):
+    while True:
+        session = search_sessions.get(token)
+        if not session:
+            return
+
+        remaining = SEARCH_SESSION_TTL - (time.time() - session["last_activity"])
+        if remaining > 0:
+            await asyncio.sleep(remaining)
+            continue
+
+        search_sessions.pop(token, None)
+        try:
+            await session["message"].delete()
+        except Exception as e:
+            logger.warning(f"Could not delete expired search results message: {e}")
+        return
 
 def fetch_search_page(keywords, page):
     query = build_search_query(keywords)
@@ -417,6 +431,91 @@ async def start_command(client: Client, message: Message):
     else:
         await message.reply_text(final_msg, reply_markup=reply_markup)
 
+@app.on_message(filters.command("dump"))
+async def dump_access(client: Client, message: Message):
+    if not message.from_user:
+        return
+
+    payment_buttons = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "Binance • 1.5 USDT",
+            callback_data=f"dump:binance:{message.from_user.id}"
+        ),
+        InlineKeyboardButton(
+            "UPI • ₹200",
+            callback_data=f"dump:upi:{message.from_user.id}"
+        )
+    ]])
+    await message.reply_text(
+        "💾 Permanent Dump Channel Access\n\n"
+        "Buy permanent access to the whole dump channel.\n\n"
+        "• Binance: 1.5 USDT only\n"
+        "• UPI: ₹200 only\n\n"
+        "Choose your payment method below. After paying, send the payment "
+        "screenshot to @rtx5069 for verification.",
+        reply_markup=payment_buttons,
+        parse_mode=None
+    )
+
+@app.on_callback_query(filters.regex(r"^dump:"))
+async def dump_payment_callback(client: Client, callback_query):
+    parts = callback_query.data.split(":")
+    if len(parts) != 3 or parts[1] not in DUMP_QR_FILES:
+        await callback_query.answer("Invalid payment method.", show_alert=True)
+        return
+
+    try:
+        requesting_user_id = int(parts[2])
+    except ValueError:
+        await callback_query.answer("Invalid payment request.", show_alert=True)
+        return
+
+    if callback_query.from_user.id != requesting_user_id:
+        await callback_query.answer(
+            "These payment buttons belong to another user.",
+            show_alert=True
+        )
+        return
+
+    payment_method = parts[1]
+    qr_path = DUMP_QR_FILES[payment_method]
+    if not os.path.exists(qr_path):
+        logger.error(f"Payment QR not found: {qr_path}")
+        await callback_query.answer(
+            "Payment QR is temporarily unavailable.",
+            show_alert=True
+        )
+        return
+
+    if payment_method == "binance":
+        caption = (
+            "Binance Payment\n\n"
+            "Amount: 1.5 USDT only\n\n"
+            "Scan this QR using the Binance app. After paying, send the "
+            "payment screenshot to @rtx5069 for verification."
+        )
+    else:
+        caption = (
+            "UPI Payment\n\n"
+            "Amount: ₹200 only\n\n"
+            "Scan this QR using any UPI app. After paying, send the payment "
+            "screenshot to @rtx5069 for verification."
+        )
+
+    await callback_query.answer("Sending payment QR...")
+    try:
+        await client.send_photo(
+            callback_query.message.chat.id,
+            qr_path,
+            caption=caption,
+            parse_mode=None
+        )
+    except Exception as e:
+        logger.error(f"Could not send {payment_method} QR: {e}")
+        await callback_query.message.reply_text(
+            "Could not send the payment QR. Please try again."
+        )
+
 @app.on_message(filters.command("random"))
 async def random_video(client: Client, message: Message):
     if videos_col is None:
@@ -462,21 +561,23 @@ async def search_files(client: Client, message: Message):
         await message.reply_text("No files found matching all supplied keywords.")
         return
 
-    cleanup_search_sessions()
     token = secrets.token_urlsafe(6)
     while token in search_sessions:
         token = secrets.token_urlsafe(6)
     search_sessions[token] = {
         "user_id": message.from_user.id,
         "keywords": keywords,
-        "created_at": time.time()
+        "last_activity": time.time(),
+        "message": None
     }
 
-    await message.reply_text(
+    search_message = await message.reply_text(
         search_result_text(keywords, total),
         reply_markup=build_search_keyboard(token, results, page, total_pages),
         parse_mode=None
     )
+    search_sessions[token]["message"] = search_message
+    asyncio.create_task(expire_search_session(token))
     try:
         await message.delete()
     except Exception as e:
@@ -499,12 +600,26 @@ async def search_callback(client: Client, callback_query):
         )
         return
 
+    if time.time() - session["last_activity"] >= SEARCH_SESSION_TTL:
+        search_sessions.pop(token, None)
+        await callback_query.answer(
+            "This search has expired. Send /search again.",
+            show_alert=True
+        )
+        try:
+            await callback_query.message.delete()
+        except Exception as e:
+            logger.warning(f"Could not delete expired search results message: {e}")
+        return
+
     if callback_query.from_user.id != session["user_id"]:
         await callback_query.answer(
             "This search belongs to another user.",
             show_alert=True
         )
         return
+
+    session["last_activity"] = time.time()
 
     if action == "noop":
         await callback_query.answer()
