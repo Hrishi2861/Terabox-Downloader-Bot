@@ -1,5 +1,12 @@
 This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 
+## Bot commands
+
+- `/random` sends a random indexed file.
+- `/search <keyword> [keyword] [keyword]` lists indexed filenames containing
+  all supplied keywords. Search accepts one to three keywords and displays five
+  results per page.
+
 ---
 
 <b>Fill this Values in [config.env](config.env)</b>

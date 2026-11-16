@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 import json
 import io
 import requests
+import re
+import secrets
 from flask import Flask, render_template
 from threading import Thread
 
@@ -128,6 +130,10 @@ user_index = None
 user_cooldowns = {}
 COOLDOWN_SECONDS = 90
 
+search_sessions = {}
+SEARCH_PAGE_SIZE = 5
+SEARCH_SESSION_TTL = 1800
+
 VALID_DOMAINS = [
     'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
     'momerybox.com', 'teraboxapp.com', '1024tera.com', 
@@ -189,6 +195,87 @@ async def delayed_delete(msg, delay):
         await msg.delete()
     except:
         pass
+
+def build_search_query(keywords):
+    return {
+        "$and": [
+            {"file_name": {"$type": "string"}},
+            *[
+                {"file_name": {"$regex": re.escape(keyword), "$options": "i"}}
+                for keyword in keywords
+            ]
+        ]
+    }
+
+def cleanup_search_sessions():
+    cutoff = time.time() - SEARCH_SESSION_TTL
+    expired_tokens = [
+        token for token, session in search_sessions.items()
+        if session["created_at"] < cutoff
+    ]
+    for token in expired_tokens:
+        search_sessions.pop(token, None)
+
+def get_search_session(token):
+    cleanup_search_sessions()
+    return search_sessions.get(token)
+
+def fetch_search_page(keywords, page):
+    query = build_search_query(keywords)
+    total = videos_col.count_documents(query)
+    total_pages = max(1, math.ceil(total / SEARCH_PAGE_SIZE))
+    page = min(max(page, 0), total_pages - 1)
+    results = list(
+        videos_col.find(
+            query,
+            {"message_id": 1, "file_name": 1, "chat_id": 1}
+        )
+        .sort([("file_name", 1), ("message_id", 1)])
+        .skip(page * SEARCH_PAGE_SIZE)
+        .limit(SEARCH_PAGE_SIZE)
+    )
+    return results, total, total_pages, page
+
+def search_result_text(keywords, total):
+    return (
+        f"🔎 Search: {' '.join(keywords)}\n"
+        f"Found {total} matching file{'s' if total != 1 else ''}. "
+        "Select a filename below."
+    )
+
+def filename_button_text(file_name):
+    if len(file_name) <= 64:
+        return file_name
+    return f"{file_name[:61]}..."
+
+def build_search_keyboard(token, results, page, total_pages):
+    rows = []
+    for doc in results:
+        file_name = doc.get("file_name") or f"File {doc['message_id']}"
+        rows.append([
+            InlineKeyboardButton(
+                filename_button_text(file_name),
+                callback_data=f"search:file:{token}:{doc['message_id']}"
+            )
+        ])
+
+    previous_callback = (
+        f"search:page:{token}:{page - 1}"
+        if page > 0 else f"search:noop:{token}"
+    )
+    next_callback = (
+        f"search:page:{token}:{page + 1}"
+        if page < total_pages - 1 else f"search:noop:{token}"
+    )
+    rows.append([
+        InlineKeyboardButton("←", callback_data=previous_callback),
+        InlineKeyboardButton(
+            f"{page + 1}/{total_pages}",
+            callback_data=f"search:noop:{token}"
+        ),
+        InlineKeyboardButton("→", callback_data=next_callback)
+    ])
+    return InlineKeyboardMarkup(rows)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -350,6 +437,162 @@ async def random_video(client: Client, message: Message):
     asyncio.create_task(delayed_delete(user_msg, 600))
     asyncio.create_task(delayed_delete(warn, 600))
     await message.delete()
+
+@app.on_message(filters.command("search"))
+async def search_files(client: Client, message: Message):
+    if videos_col is None:
+        await message.reply_text("MongoDB not configured.")
+        return
+
+    keywords = [keyword.strip() for keyword in message.command[1:] if keyword.strip()]
+    if not 1 <= len(keywords) <= 3:
+        await message.reply_text("Usage: /search <1 to 3 keywords>")
+        return
+
+    try:
+        results, total, total_pages, page = await asyncio.to_thread(
+            fetch_search_page, keywords, 0
+        )
+    except Exception as e:
+        logger.error(f"Search failed for {keywords}: {e}")
+        await message.reply_text("Search is temporarily unavailable. Please try again.")
+        return
+
+    if total == 0:
+        await message.reply_text("No files found matching all supplied keywords.")
+        return
+
+    cleanup_search_sessions()
+    token = secrets.token_urlsafe(6)
+    while token in search_sessions:
+        token = secrets.token_urlsafe(6)
+    search_sessions[token] = {
+        "user_id": message.from_user.id,
+        "keywords": keywords,
+        "created_at": time.time()
+    }
+
+    await message.reply_text(
+        search_result_text(keywords, total),
+        reply_markup=build_search_keyboard(token, results, page, total_pages),
+        parse_mode=None
+    )
+
+@app.on_callback_query(filters.regex(r"^search:"))
+async def search_callback(client: Client, callback_query):
+    parts = callback_query.data.split(":")
+    if len(parts) < 3:
+        await callback_query.answer("Invalid search action.", show_alert=True)
+        return
+
+    action = parts[1]
+    token = parts[2]
+    session = get_search_session(token)
+    if not session:
+        await callback_query.answer(
+            "This search has expired. Send /search again.",
+            show_alert=True
+        )
+        return
+
+    if callback_query.from_user.id != session["user_id"]:
+        await callback_query.answer(
+            "This search belongs to another user.",
+            show_alert=True
+        )
+        return
+
+    if action == "noop":
+        await callback_query.answer()
+        return
+
+    if action == "page":
+        if len(parts) != 4:
+            await callback_query.answer("Invalid page.", show_alert=True)
+            return
+        try:
+            requested_page = int(parts[3])
+            results, total, total_pages, page = await asyncio.to_thread(
+                fetch_search_page, session["keywords"], requested_page
+            )
+        except Exception as e:
+            logger.error(f"Search pagination failed: {e}")
+            await callback_query.answer(
+                "Could not load this page. Please try again.",
+                show_alert=True
+            )
+            return
+
+        if total == 0:
+            search_sessions.pop(token, None)
+            await callback_query.message.edit_text(
+                "No matching files are available anymore.",
+                parse_mode=None
+            )
+            await callback_query.answer()
+            return
+
+        await callback_query.message.edit_text(
+            search_result_text(session["keywords"], total),
+            reply_markup=build_search_keyboard(
+                token, results, page, total_pages
+            ),
+            parse_mode=None
+        )
+        await callback_query.answer()
+        return
+
+    if action == "file":
+        if len(parts) != 4:
+            await callback_query.answer("Invalid file.", show_alert=True)
+            return
+        try:
+            message_id = int(parts[3])
+        except ValueError:
+            await callback_query.answer("Invalid file.", show_alert=True)
+            return
+
+        query = build_search_query(session["keywords"])
+        query["$and"].append({"message_id": message_id})
+        try:
+            doc = await asyncio.to_thread(videos_col.find_one, query)
+        except Exception as e:
+            logger.error(f"Search file lookup failed: {e}")
+            await callback_query.answer(
+                "Could not find this file. Please try again.",
+                show_alert=True
+            )
+            return
+
+        if not doc:
+            await callback_query.answer(
+                "This file is no longer available.",
+                show_alert=True
+            )
+            return
+
+        await callback_query.answer("Sending file...")
+        try:
+            user_msg = await client.copy_message(
+                callback_query.message.chat.id,
+                doc["chat_id"],
+                doc["message_id"],
+                caption=""
+            )
+            warn = await client.send_message(
+                callback_query.message.chat.id,
+                "⚠️ ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
+            )
+            asyncio.create_task(delayed_delete(user_msg, 600))
+            asyncio.create_task(delayed_delete(warn, 600))
+        except Exception as e:
+            logger.error(f"Failed to send searched file {message_id}: {e}")
+            await callback_query.message.reply_text(
+                "Failed to send this file. It may have been removed from the source channel."
+            )
+        return
+
+    await callback_query.answer("Invalid search action.", show_alert=True)
 
 @app.on_message(filters.command("refresh"))
 async def refresh_index(client: Client, message: Message):
