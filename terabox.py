@@ -6,7 +6,7 @@ import os
 import logging
 import math
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import FloodWait
 from pymongo import MongoClient
@@ -502,19 +502,24 @@ async def dump_payment_callback(client: Client, callback_query):
             "screenshot to @rtx5069 for verification."
         )
 
-    await callback_query.answer("Sending payment QR...")
+    await callback_query.answer("Opening payment QR...")
     try:
-        await client.send_photo(
-            callback_query.message.chat.id,
-            qr_path,
-            caption=caption,
-            parse_mode=None
+        await callback_query.message.edit_media(
+            InputMediaPhoto(
+                media=qr_path,
+                caption=caption,
+                parse_mode=None
+            ),
+            reply_markup=None
         )
     except Exception as e:
-        logger.error(f"Could not send {payment_method} QR: {e}")
-        await callback_query.message.reply_text(
-            "Could not send the payment QR. Please try again."
-        )
+        logger.error(f"Could not display {payment_method} QR: {e}")
+        try:
+            await callback_query.message.edit_text(
+                "Could not display the payment QR. Please send /dump and try again."
+            )
+        except Exception as edit_error:
+            logger.error(f"Could not update failed payment message: {edit_error}")
 
 @app.on_message(filters.command("random"))
 async def random_video(client: Client, message: Message):
