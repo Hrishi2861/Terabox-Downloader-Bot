@@ -477,6 +477,10 @@ async def search_files(client: Client, message: Message):
         reply_markup=build_search_keyboard(token, results, page, total_pages),
         parse_mode=None
     )
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning(f"Could not delete search command message: {e}")
 
 @app.on_callback_query(filters.regex(r"^search:"))
 async def search_callback(client: Client, callback_query):
@@ -579,17 +583,28 @@ async def search_callback(client: Client, callback_query):
                 doc["message_id"],
                 caption=""
             )
-            warn = await client.send_message(
-                callback_query.message.chat.id,
-                "⚠️ ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
-            )
-            asyncio.create_task(delayed_delete(user_msg, 600))
-            asyncio.create_task(delayed_delete(warn, 600))
         except Exception as e:
             logger.error(f"Failed to send searched file {message_id}: {e}")
             await callback_query.message.reply_text(
                 "Failed to send this file. It may have been removed from the source channel."
             )
+            return
+
+        asyncio.create_task(delayed_delete(user_msg, 600))
+        try:
+            warn = await client.send_message(
+                callback_query.message.chat.id,
+                "⚠️ ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
+            )
+            asyncio.create_task(delayed_delete(warn, 600))
+        except Exception as e:
+            logger.warning(f"Could not send auto-delete warning: {e}")
+
+        search_sessions.pop(token, None)
+        try:
+            await callback_query.message.delete()
+        except Exception as e:
+            logger.warning(f"Could not delete search results message: {e}")
         return
 
     await callback_query.answer("Invalid search action.", show_alert=True)
