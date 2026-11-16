@@ -141,6 +141,52 @@ DUMP_QR_FILES = {
     "upi": os.path.join(BASE_DIR, "Pay-QR", "upi.jpg")
 }
 
+DUMP_OFFER_CAPTION = (
+    "💾 Permanent Dump Channel Access\n\n"
+    "Buy permanent access to the whole dump channel.\n\n"
+    "• Binance: 1.5 USDT only\n"
+    "• UPI: ₹200 only\n\n"
+    "Choose your payment method below. After paying, send the payment "
+    "screenshot to @rtx5069 for verification."
+)
+
+DUMP_METHOD_LABELS = {
+    "binance": "Binance • 1.5 USDT",
+    "upi": "UPI • ₹200"
+}
+
+def build_dump_offer_media():
+    return InputMediaPhoto(
+        media=DUMP_DONATION_IMAGE,
+        caption=DUMP_OFFER_CAPTION,
+        parse_mode=None
+    )
+
+def build_dump_payment_keyboard(user_id):
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            DUMP_METHOD_LABELS["binance"],
+            callback_data=f"dump:binance:{user_id}"
+        ),
+        InlineKeyboardButton(
+            DUMP_METHOD_LABELS["upi"],
+            callback_data=f"dump:upi:{user_id}"
+        )
+    ]])
+
+def build_dump_qr_keyboard(payment_method, user_id):
+    other_method = "upi" if payment_method == "binance" else "binance"
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "← Back",
+            callback_data=f"dump:back:{user_id}"
+        ),
+        InlineKeyboardButton(
+            DUMP_METHOD_LABELS[other_method],
+            callback_data=f"dump:{other_method}:{user_id}"
+        )
+    ]])
+
 VALID_DOMAINS = [
     'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
     'momerybox.com', 'teraboxapp.com', '1024tera.com', 
@@ -442,29 +488,12 @@ async def dump_access(client: Client, message: Message):
         await message.reply_text("Dump access information is temporarily unavailable.")
         return
 
-    payment_buttons = InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            "Binance • 1.5 USDT",
-            callback_data=f"dump:binance:{message.from_user.id}"
-        ),
-        InlineKeyboardButton(
-            "UPI • ₹200",
-            callback_data=f"dump:upi:{message.from_user.id}"
-        )
-    ]])
-    caption = (
-        "💾 Permanent Dump Channel Access\n\n"
-        "Buy permanent access to the whole dump channel.\n\n"
-        "• Binance: 1.5 USDT only\n"
-        "• UPI: ₹200 only\n\n"
-        "Choose your payment method below. After paying, send the payment "
-        "screenshot to @rtx5069 for verification."
-    )
+    caption = DUMP_OFFER_CAPTION
     await client.send_photo(
         message.chat.id,
         DUMP_DONATION_IMAGE,
         caption=caption,
-        reply_markup=payment_buttons,
+        reply_markup=build_dump_payment_keyboard(message.from_user.id),
         parse_mode=None,
         reply_to_message_id=message.id
     )
@@ -472,7 +501,7 @@ async def dump_access(client: Client, message: Message):
 @app.on_callback_query(filters.regex(r"^dump:"))
 async def dump_payment_callback(client: Client, callback_query):
     parts = callback_query.data.split(":")
-    if len(parts) != 3 or parts[1] not in DUMP_QR_FILES:
+    if len(parts) != 3 or (parts[1] not in DUMP_QR_FILES and parts[1] != "back"):
         await callback_query.answer("Invalid payment method.", show_alert=True)
         return
 
@@ -490,6 +519,25 @@ async def dump_payment_callback(client: Client, callback_query):
         return
 
     payment_method = parts[1]
+
+    if payment_method == "back":
+        if not os.path.exists(DUMP_DONATION_IMAGE):
+            logger.error(f"Donation image not found: {DUMP_DONATION_IMAGE}")
+            await callback_query.answer(
+                "Payment menu is temporarily unavailable.",
+                show_alert=True
+            )
+            return
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_media(
+                build_dump_offer_media(),
+                reply_markup=build_dump_payment_keyboard(requesting_user_id)
+            )
+        except Exception as e:
+            logger.error(f"Could not restore dump payment menu: {e}")
+        return
+
     qr_path = DUMP_QR_FILES[payment_method]
     if not os.path.exists(qr_path):
         logger.error(f"Payment QR not found: {qr_path}")
@@ -522,7 +570,9 @@ async def dump_payment_callback(client: Client, callback_query):
                 caption=caption,
                 parse_mode=None
             ),
-            reply_markup=None
+            reply_markup=build_dump_qr_keyboard(
+                payment_method, requesting_user_id
+            )
         )
     except Exception as e:
         logger.error(f"Could not display {payment_method} QR: {e}")
