@@ -21,6 +21,7 @@ import re
 import secrets
 from flask import Flask, render_template
 from threading import Thread
+from translations import TRANSLATIONS, LANGUAGES, LANGUAGE_CODES
 
 load_dotenv('config.env', override=True)
 logging.basicConfig(
@@ -105,12 +106,15 @@ if MONGO_URI and INDEX_CHAT_ID:
     videos_col.create_index("message_id", unique=True)
     premium_col = db["premium"]
     premium_col.create_index("user_id", unique=True)
+    users_col = db["users"]
+    users_col.create_index("user_id", unique=True)
     logger.info("MongoDB connected")
 else:
     mongo_client = None
     db = None
     videos_col = None
     premium_col = None
+    users_col = None
     INDEX_CHAT_ID = None
 
 app = Client("jetbot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -281,6 +285,101 @@ async def expire_search_session(token):
             logger.warning(f"Could not delete expired search results message: {e}")
         return
 
+user_lang_cache = {}
+
+def get_user_lang(user_id):
+    if user_id in user_lang_cache:
+        return user_lang_cache[user_id]
+    code = "en"
+    if users_col is not None:
+        try:
+            doc = users_col.find_one({"user_id": user_id}, {"language_code": 1})
+            if doc and doc.get("language_code") in LANGUAGE_CODES:
+                code = doc["language_code"]
+        except Exception as e:
+            logger.warning(f"Could not load language for user {user_id}: {e}")
+    user_lang_cache[user_id] = code
+    return code
+
+def set_user_lang(user_id, code):
+    if code not in LANGUAGE_CODES:
+        return
+    user_lang_cache[user_id] = code
+    if users_col is not None:
+        try:
+            users_col.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "language_code": code,
+                    "updated_at": datetime.now(timezone.utc)
+                }},
+                upsert=True
+            )
+        except Exception as e:
+            logger.warning(f"Could not save language for user {user_id}: {e}")
+
+def t(user_id, key, **kwargs):
+    code = get_user_lang(user_id)
+    template = TRANSLATIONS.get(code, {}).get(key)
+    if template is None:
+        template = TRANSLATIONS["en"].get(key, key)
+    if kwargs:
+        try:
+            return template.format(**kwargs)
+        except Exception as e:
+            logger.warning(f"Translation format error for {key}: {e}")
+            return template
+    return template
+
+settings_sessions = {}
+SETTINGS_TTL = 300
+
+def build_settings_menu_keyboard(token):
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("Language/भाषा", callback_data=f"us:open:{token}")
+    ]])
+
+def build_language_grid_keyboard(token, selected):
+    rows = []
+    row = []
+    for code, name in LANGUAGES:
+        label = ("✅ " + name) if code == selected else name
+        row.append(InlineKeyboardButton(
+            label, callback_data=f"us:lang:{token}:{code}"
+        ))
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    if selected:
+        confirm_label = (
+            TRANSLATIONS.get(selected, {}).get("confirm")
+            or TRANSLATIONS["en"]["confirm"]
+        )
+        rows.append([InlineKeyboardButton(
+            confirm_label, callback_data=f"us:confirm:{token}"
+        )])
+    return InlineKeyboardMarkup(rows)
+
+async def expire_settings_session(token):
+    while True:
+        session = settings_sessions.get(token)
+        if not session:
+            return
+
+        remaining = SETTINGS_TTL - (time.time() - session["last_activity"])
+        if remaining > 0:
+            await asyncio.sleep(remaining)
+            continue
+
+        settings_sessions.pop(token, None)
+        try:
+            await session["message"].delete()
+        except Exception as e:
+            logger.warning(f"Could not delete expired settings message: {e}")
+        return
+
 def fetch_search_page(keywords, page):
     query = build_search_query(keywords)
     total = videos_col.count_documents(query)
@@ -296,13 +395,6 @@ def fetch_search_page(keywords, page):
         .limit(SEARCH_PAGE_SIZE)
     )
     return results, total, total_pages, page
-
-def search_result_text(keywords, total):
-    return (
-        f"🔎 Search: {' '.join(keywords)}\n"
-        f"Found {total} matching file{'s' if total != 1 else ''}. "
-        "Select a filename below."
-    )
 
 def filename_button_text(file_name):
     if len(file_name) <= 64:
@@ -466,7 +558,7 @@ async def start_command(client: Client, message: Message):
     repo69 = InlineKeyboardButton("ʀᴇᴘᴏ 🌐", url="https://github.com/Hrishi2861/Terabox-Downloader-Bot")
     user_mention = message.from_user.mention
     reply_markup = InlineKeyboardMarkup([[join_button, developer_button], [repo69]])
-    final_msg = f"ᴡᴇʟᴄᴏᴍᴇ, {user_mention}.\n\n🌟 ɪ ᴀᴍ ᴀ ᴛᴇʀᴀʙᴏx ᴅᴏᴡɴʟᴏᴀᴅᴇʀ ʙᴏᴛ. sᴇɴᴅ ᴍᴇ ᴀɴʏ ᴛᴇʀᴀʙᴏx ʟɪɴᴋ ɪ ᴡɪʟʟ ᴅᴏᴡɴʟᴏᴀᴅ ᴡɪᴛʜɪɴ ғᴇᴡ sᴇᴄᴏɴᴅs ᴀɴᴅ sᴇɴᴅ ɪᴛ ᴛᴏ ʏᴏᴜ ✨."
+    final_msg = t(message.from_user.id, "welcome", mention=user_mention)
     video_file_id = "/app/Jet-Mirror.mp4"
     if os.path.exists(video_file_id):
         await client.send_video(
@@ -485,10 +577,12 @@ async def dump_access(client: Client, message: Message):
 
     if not os.path.exists(DUMP_DONATION_IMAGE):
         logger.error(f"Donation image not found: {DUMP_DONATION_IMAGE}")
-        await message.reply_text("Dump access information is temporarily unavailable.")
+        await message.reply_text(
+            t(message.from_user.id, "dump_unavailable")
+        )
         return
 
-    caption = DUMP_OFFER_CAPTION
+    caption = t(message.from_user.id, "dump_caption")
     await client.send_photo(
         message.chat.id,
         DUMP_DONATION_IMAGE,
@@ -524,7 +618,7 @@ async def dump_payment_callback(client: Client, callback_query):
         if not os.path.exists(DUMP_DONATION_IMAGE):
             logger.error(f"Donation image not found: {DUMP_DONATION_IMAGE}")
             await callback_query.answer(
-                "Payment menu is temporarily unavailable.",
+                t(requesting_user_id, "dump_menu_unavailable"),
                 show_alert=True
             )
             return
@@ -548,19 +642,9 @@ async def dump_payment_callback(client: Client, callback_query):
         return
 
     if payment_method == "binance":
-        caption = (
-            "Binance Payment\n\n"
-            "Amount: 1.5 USDT only\n\n"
-            "Scan this QR using the Binance app. After paying, send the "
-            "payment screenshot to @rtx5069 for verification."
-        )
+        caption = t(requesting_user_id, "dump_qr_binance")
     else:
-        caption = (
-            "UPI Payment\n\n"
-            "Amount: ₹200 only\n\n"
-            "Scan this QR using any UPI app. After paying, send the payment "
-            "screenshot to @rtx5069 for verification."
-        )
+        caption = t(requesting_user_id, "dump_qr_upi")
 
     await callback_query.answer("Opening payment QR...")
     try:
@@ -578,27 +662,129 @@ async def dump_payment_callback(client: Client, callback_query):
         logger.error(f"Could not display {payment_method} QR: {e}")
         try:
             await callback_query.message.edit_text(
-                "Could not display the payment QR. Please send /dump and try again."
+                t(requesting_user_id, "dump_qr_error")
             )
         except Exception as edit_error:
             logger.error(f"Could not update failed payment message: {edit_error}")
 
+@app.on_message(filters.command("user_settings"))
+async def user_settings_cmd(client: Client, message: Message):
+    if not message.from_user:
+        return
+    uid = message.from_user.id
+
+    token = secrets.token_urlsafe(6)
+    while token in settings_sessions:
+        token = secrets.token_urlsafe(6)
+    settings_sessions[token] = {
+        "user_id": uid,
+        "selected": get_user_lang(uid),
+        "message": None,
+        "last_activity": time.time()
+    }
+
+    settings_message = await message.reply_text(
+        t(uid, "settings_title"),
+        reply_markup=build_settings_menu_keyboard(token),
+        parse_mode=None
+    )
+    settings_sessions[token]["message"] = settings_message
+    asyncio.create_task(expire_settings_session(token))
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning(f"Could not delete user_settings command message: {e}")
+
+@app.on_callback_query(filters.regex(r"^us:"))
+async def user_settings_callback(client: Client, callback_query):
+    parts = callback_query.data.split(":")
+    if len(parts) < 3:
+        await callback_query.answer("Invalid settings action.", show_alert=True)
+        return
+
+    action, token = parts[1], parts[2]
+    session = settings_sessions.get(token)
+    if not session:
+        await callback_query.answer(
+            "This settings menu has expired. Send /user_settings again.",
+            show_alert=True
+        )
+        return
+
+    if callback_query.from_user.id != session["user_id"]:
+        await callback_query.answer(
+            "This settings menu belongs to another user.",
+            show_alert=True
+        )
+        return
+
+    uid = session["user_id"]
+    session["last_activity"] = time.time()
+
+    if action == "open":
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "select_language"),
+                reply_markup=build_language_grid_keyboard(
+                    token, session["selected"]
+                ),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not open language grid: {e}")
+        return
+
+    if action == "lang":
+        code = parts[3] if len(parts) == 4 else ""
+        if code not in LANGUAGE_CODES:
+            await callback_query.answer("Invalid language.", show_alert=True)
+            return
+        session["selected"] = code
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "select_language"),
+                reply_markup=build_language_grid_keyboard(token, code),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not update language selection: {e}")
+        return
+
+    if action == "confirm":
+        code = session.get("selected") or "en"
+        set_user_lang(uid, code)
+        settings_sessions.pop(token, None)
+        await callback_query.answer()
+        language_name = dict(LANGUAGES).get(code, code)
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "language_saved", language=language_name),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not confirm language: {e}")
+        return
+
+    await callback_query.answer("Invalid settings action.", show_alert=True)
+
 @app.on_message(filters.command("random"))
 async def random_video(client: Client, message: Message):
     if videos_col is None:
-        await message.reply_text("MongoDB not configured.")
+        await message.reply_text(t(message.from_user.id, "mongo_missing"))
         return
     pipeline = [{"$sample": {"size": 1}}]
     result = list(videos_col.aggregate(pipeline))
     if not result:
-        await message.reply_text("No videos indexed yet. Owner use /refresh to build index.")
+        await message.reply_text(t(message.from_user.id, "no_videos"))
         return
     doc = result[0]
     user_msg = await client.copy_message(message.chat.id, doc["chat_id"], doc["message_id"], caption="")
 
     warn = await client.send_message(
         message.chat.id,
-        "⚠️ ᴛʜɪs ᴠɪᴅᴇᴏ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
+        t(message.from_user.id, "file_deleted_warning")
     )
     asyncio.create_task(delayed_delete(user_msg, 600))
     asyncio.create_task(delayed_delete(warn, 600))
@@ -607,12 +793,12 @@ async def random_video(client: Client, message: Message):
 @app.on_message(filters.command("search"))
 async def search_files(client: Client, message: Message):
     if videos_col is None:
-        await message.reply_text("MongoDB not configured.")
+        await message.reply_text(t(message.from_user.id, "mongo_missing"))
         return
 
     keywords = [keyword.strip() for keyword in message.command[1:] if keyword.strip()]
     if not 1 <= len(keywords) <= 3:
-        await message.reply_text("Usage: /search <1 to 3 keywords>")
+        await message.reply_text(t(message.from_user.id, "search_usage"))
         return
 
     try:
@@ -621,11 +807,11 @@ async def search_files(client: Client, message: Message):
         )
     except Exception as e:
         logger.error(f"Search failed for {keywords}: {e}")
-        await message.reply_text("Search is temporarily unavailable. Please try again.")
+        await message.reply_text(t(message.from_user.id, "search_unavailable"))
         return
 
     if total == 0:
-        await message.reply_text("No files found matching all supplied keywords.")
+        await message.reply_text(t(message.from_user.id, "search_no_results"))
         return
 
     token = secrets.token_urlsafe(6)
@@ -639,7 +825,8 @@ async def search_files(client: Client, message: Message):
     }
 
     search_message = await message.reply_text(
-        search_result_text(keywords, total),
+        t(message.from_user.id, "search_header",
+          keywords=" ".join(keywords), count=total),
         reply_markup=build_search_keyboard(token, results, page, total_pages),
         parse_mode=None
     )
@@ -662,7 +849,7 @@ async def search_callback(client: Client, callback_query):
     session = get_search_session(token)
     if not session:
         await callback_query.answer(
-            "This search has expired. Send /search again.",
+            t(callback_query.from_user.id, "search_expired"),
             show_alert=True
         )
         return
@@ -670,7 +857,7 @@ async def search_callback(client: Client, callback_query):
     if time.time() - session["last_activity"] >= SEARCH_SESSION_TTL:
         search_sessions.pop(token, None)
         await callback_query.answer(
-            "This search has expired. Send /search again.",
+            t(callback_query.from_user.id, "search_expired"),
             show_alert=True
         )
         try:
@@ -681,7 +868,7 @@ async def search_callback(client: Client, callback_query):
 
     if callback_query.from_user.id != session["user_id"]:
         await callback_query.answer(
-            "This search belongs to another user.",
+            t(callback_query.from_user.id, "search_not_yours"),
             show_alert=True
         )
         return
@@ -712,14 +899,15 @@ async def search_callback(client: Client, callback_query):
         if total == 0:
             search_sessions.pop(token, None)
             await callback_query.message.edit_text(
-                "No matching files are available anymore.",
+                t(session["user_id"], "search_none_left"),
                 parse_mode=None
             )
             await callback_query.answer()
             return
 
         await callback_query.message.edit_text(
-            search_result_text(session["keywords"], total),
+            t(session["user_id"], "search_header",
+              keywords=" ".join(session["keywords"]), count=total),
             reply_markup=build_search_keyboard(
                 token, results, page, total_pages
             ),
@@ -752,12 +940,14 @@ async def search_callback(client: Client, callback_query):
 
         if not doc:
             await callback_query.answer(
-                "This file is no longer available.",
+                t(callback_query.from_user.id, "search_file_unavailable"),
                 show_alert=True
             )
             return
 
-        await callback_query.answer("Sending file...")
+        await callback_query.answer(
+            t(callback_query.from_user.id, "search_sending")
+        )
         try:
             user_msg = await client.copy_message(
                 callback_query.message.chat.id,
@@ -768,7 +958,7 @@ async def search_callback(client: Client, callback_query):
         except Exception as e:
             logger.error(f"Failed to send searched file {message_id}: {e}")
             await callback_query.message.reply_text(
-                "Failed to send this file. It may have been removed from the source channel."
+                t(callback_query.from_user.id, "search_send_failed")
             )
             return
 
@@ -776,7 +966,7 @@ async def search_callback(client: Client, callback_query):
         try:
             warn = await client.send_message(
                 callback_query.message.chat.id,
-                "⚠️ ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
+                t(callback_query.from_user.id, "file_deleted_warning")
             )
             asyncio.create_task(delayed_delete(warn, 600))
         except Exception as e:
@@ -907,7 +1097,9 @@ async def handle_message(client: Client, message: Message):
         if not is_member:
             join_button = InlineKeyboardButton("ᴊᴏɪɴ ❤️🚀", url="https://t.me/jetmirror")
             reply_markup = InlineKeyboardMarkup([[join_button]])
-            await message.reply_text("ʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴍʏ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴜsᴇ ᴍᴇ.", reply_markup=reply_markup)
+            await message.reply_text(
+                t(user_id, "must_join"), reply_markup=reply_markup
+            )
             return
     
     url = None
@@ -917,7 +1109,7 @@ async def handle_message(client: Client, message: Message):
             break
 
     if not url:
-        await message.reply_text("Please provide a valid Terabox link.")
+        await message.reply_text(t(user_id, "invalid_link"))
         return
 
     if user_id != OWNER_ID and not is_premium(user_id):
@@ -926,15 +1118,14 @@ async def handle_message(client: Client, message: Message):
         if now - last_request < COOLDOWN_SECONDS:
             remaining = int(COOLDOWN_SECONDS - (now - last_request))
             reply = await message.reply_text(
-                f"ᴀᴘɪ ɪs sᴛɪʟʟ ᴜɴᴅᴇʀ ᴅᴇᴠᴇʟᴏᴘᴍᴇɴᴛ.\n"
-                f"ᴛᴏ ʀᴇᴅᴜᴄᴇ ᴀʙᴜsᴇ ʏᴏᴜ ᴍᴜsᴛ ᴡᴀɪᴛ {remaining}s."
+                t(user_id, "cooldown", remaining=remaining)
             )
             await message.delete()
             asyncio.create_task(delayed_delete(reply, remaining))
             return
     encoded_url = urllib.parse.quote(url)
 
-    status_message = await message.reply_text("sᴇɴᴅɪɴɢ ʏᴏᴜ ᴛʜᴇ ᴍᴇᴅɪᴀ...🤤")
+    status_message = await message.reply_text(t(user_id, "sending_media"))
 
     final_url = f"http://localhost:8000/download?url={encoded_url}"
     download = aria2.add_uris([final_url])
@@ -986,11 +1177,7 @@ async def handle_message(client: Client, message: Message):
             await message.delete()
         except:
             pass
-        await message.reply_text(
-            "ᴅᴏᴡɴʟᴏᴀᴅ ғᴀɪʟᴇᴅ ❌\n\n"
-            "ʀᴇᴀsᴏɴ: ʟɪɴᴋ ᴍᴀʏ ʙᴇ ʙʀᴏᴋᴇɴ ᴏʀ ɪᴛ's ᴀ ғᴏʟᴅᴇʀ ʟɪɴᴋ.\n"
-            "ᴏɴʟʏ ғɪʟᴇ ʟɪɴᴋs ᴀʀᴇ sᴜᴘᴘᴏʀᴛᴇᴅ."
-        )
+        await message.reply_text(t(user_id, "download_failed"))
         return
 
     file_path = download.files[0].path
@@ -1167,10 +1354,10 @@ async def handle_message(client: Client, message: Message):
             asyncio.create_task(delayed_delete(msg, 600))
         warn = await client.send_message(
             message.chat.id,
-            "⚠️ ᴛʜɪs ᴠɪᴅᴇᴏ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇᴅ ɪɴ 𝟷𝟶 ᴍɪɴᴜᴛᴇs. ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ sᴀᴠᴇ."
+            t(user_id, "file_deleted_warning")
         )
         asyncio.create_task(delayed_delete(warn, 600))
-        
+
         if os.path.exists(file_path):
             os.remove(file_path)
         if thumb_bytes:

@@ -8,6 +8,11 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
   results per page. Inactive search menus expire after 60 seconds.
 - `/dump` displays the available payment methods for permanent dump-channel
   access and sends the selected payment QR.
+- `/user_settings` opens user settings with a `Language/भाषा` button.
+  It supports 14 languages, each shown in its own native script
+  (English, हिन्दी, मराठी, বাংলা, தமிழ், తెలుగు, ಕನ್ನಡ, മലയാളം, اردو,
+  ਪੰਜਾਬੀ, ગુજરાતી, Español, Français, Deutsch). The chosen language is
+  saved per user and confirmed with a button in that language.
 
 ---
 
