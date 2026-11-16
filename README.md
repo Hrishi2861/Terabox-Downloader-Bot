@@ -13,6 +13,20 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
   (English, हिन्दी, मराठी, বাংলা, தமிழ், తెలుగు, ಕನ್ನಡ, മലയാളം, اردو,
   ਪੰਜਾਬੀ, ગુજરાતી, Español, Français, Deutsch). The chosen language is
   saved per user and confirmed with a button in that language.
+- `/user_settings` also offers **🖼️ Thumbnail** and **📥 Leech Destination**
+  options (with `← Back` navigation in every sub-menu):
+  - **Thumbnail:** send a photo to set a custom video thumbnail. It is
+    normalized to a small JPEG and applied to uploaded videos (including
+    every part of split uploads). Remove restores auto-generated thumbs.
+  - **Leech Destination:** send a `-100…` channel/group ID. The bot must
+    be an admin there and the user must also be an admin of that chat.
+    Videos are always uploaded to `DUMP_CHAT_ID` first, then copied to the
+    chosen destination. Copies to a custom destination are permanent —
+    the 10-minute auto-delete only applies when no destination is set.
+    If the copy fails at upload time, the video is sent to the user's chat
+    instead with an error note.
+- Pending setting inputs expire after 5 minutes and can be aborted with
+  `/cancel`.
 
 ---
 

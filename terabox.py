@@ -333,11 +333,79 @@ def t(user_id, key, **kwargs):
 
 settings_sessions = {}
 SETTINGS_TTL = 300
+pending_inputs = {}
+PENDING_TTL = 300
+user_settings_cache = {}
+
+def get_user_setting(user_id, key, default=None):
+    cache_key = (user_id, key)
+    if cache_key in user_settings_cache:
+        return user_settings_cache[cache_key]
+    value = default
+    if users_col is not None:
+        try:
+            doc = users_col.find_one({"user_id": user_id}, {key: 1})
+            if doc and doc.get(key) is not None:
+                value = doc[key]
+        except Exception as e:
+            logger.warning(f"Could not load {key} for user {user_id}: {e}")
+    user_settings_cache[cache_key] = value
+    return value
+
+def set_user_setting(user_id, **values):
+    for key, value in values.items():
+        user_settings_cache[(user_id, key)] = value
+    if users_col is not None:
+        try:
+            users_col.update_one(
+                {"user_id": user_id},
+                {"$set": {**values, "updated_at": datetime.now(timezone.utc)}},
+                upsert=True
+            )
+        except Exception as e:
+            logger.warning(f"Could not save settings for user {user_id}: {e}")
+
+async def build_settings_status(client, uid):
+    language_name = dict(LANGUAGES).get(get_user_lang(uid), "English")
+    thumb_label = "✅" if get_user_setting(uid, "thumbnail_file_id") else "—"
+    dest = get_user_setting(uid, "leech_destination")
+    if dest:
+        dest_label = str(dest)
+        try:
+            chat = await client.get_chat(int(dest))
+            dest_label = chat.title or dest_label
+        except Exception as e:
+            logger.warning(f"Could not load destination chat title: {e}")
+    else:
+        dest_label = t(uid, "dest_default")
+    return t(uid, "settings_status",
+             language=language_name, thumb=thumb_label, dest=dest_label)
 
 def build_settings_menu_keyboard(token):
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton("Language/भाषा", callback_data=f"us:open:{token}")
-    ]])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Language/भाषा", callback_data=f"us:open:{token}")],
+        [InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"us:thumb:{token}")],
+        [InlineKeyboardButton("📥 Leech Destination", callback_data=f"us:dest:{token}")],
+    ])
+
+def build_thumb_submenu_keyboard(token):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🖼️ Set", callback_data=f"us:thumbset:{token}"),
+         InlineKeyboardButton("🗑️ Remove", callback_data=f"us:thumbdel:{token}")],
+        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
+    ])
+
+def build_dest_submenu_keyboard(token):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📥 Set", callback_data=f"us:destset:{token}"),
+         InlineKeyboardButton("🗑️ Remove", callback_data=f"us:destdel:{token}")],
+        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
+    ])
+
+def build_settings_back_keyboard(token):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
+    ])
 
 def build_language_grid_keyboard(token, selected):
     rows = []
@@ -683,8 +751,9 @@ async def user_settings_cmd(client: Client, message: Message):
         "last_activity": time.time()
     }
 
+    status_text = await build_settings_status(client, uid)
     settings_message = await message.reply_text(
-        t(uid, "settings_title"),
+        status_text,
         reply_markup=build_settings_menu_keyboard(token),
         parse_mode=None
     )
@@ -767,7 +836,243 @@ async def user_settings_callback(client: Client, callback_query):
             logger.warning(f"Could not confirm language: {e}")
         return
 
+    if action == "back":
+        pending = pending_inputs.get(uid)
+        if pending and pending.get("token") == token:
+            pending_inputs.pop(uid, None)
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                await build_settings_status(client, uid),
+                reply_markup=build_settings_menu_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not return to settings menu: {e}")
+        return
+
+    if action == "thumb":
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                await build_settings_status(client, uid),
+                reply_markup=build_thumb_submenu_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not open thumbnail sub-menu: {e}")
+        return
+
+    if action == "thumbset":
+        pending_inputs[uid] = {
+            "type": "thumb",
+            "token": token,
+            "expires": time.time() + PENDING_TTL
+        }
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "thumb_set_prompt"),
+                reply_markup=build_settings_back_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not show thumbnail prompt: {e}")
+        return
+
+    if action == "thumbdel":
+        set_user_setting(uid, thumbnail_file_id=None)
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "thumb_removed"),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not remove thumbnail: {e}")
+        return
+
+    if action == "dest":
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                await build_settings_status(client, uid),
+                reply_markup=build_dest_submenu_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not open destination sub-menu: {e}")
+        return
+
+    if action == "destset":
+        pending_inputs[uid] = {
+            "type": "dest",
+            "token": token,
+            "expires": time.time() + PENDING_TTL
+        }
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "dest_set_prompt"),
+                reply_markup=build_settings_back_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not show destination prompt: {e}")
+        return
+
+    if action == "destdel":
+        set_user_setting(uid, leech_destination=None, leech_destination_title=None)
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "dest_removed"),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not remove destination: {e}")
+        return
+
     await callback_query.answer("Invalid settings action.", show_alert=True)
+
+DEST_ID_PATTERN = re.compile(r'^-100\d{6,}$')
+
+def is_destination_admin(member):
+    return getattr(member, "status", None) in ("administrator", "owner", "creator")
+
+async def validate_leech_destination(client, uid, raw_text):
+    text = raw_text.strip()
+    if not DEST_ID_PATTERN.match(text):
+        return None, t(uid, "dest_invalid")
+    dest_id = int(text)
+    try:
+        bot_member = await client.get_chat_member(dest_id, "me")
+    except Exception:
+        return None, t(uid, "dest_no_access")
+    if not is_destination_admin(bot_member):
+        return None, t(uid, "dest_no_access")
+    try:
+        user_member = await client.get_chat_member(dest_id, uid)
+    except Exception:
+        return None, t(uid, "dest_not_admin")
+    if not is_destination_admin(user_member):
+        return None, t(uid, "dest_not_admin")
+    try:
+        return await client.get_chat(dest_id), None
+    except Exception:
+        return dest_id, None
+
+async def handle_pending_input(client, message, pending):
+    uid = message.from_user.id
+    token = pending.get("token")
+    session = settings_sessions.get(token)
+
+    if pending["type"] == "thumb":
+        os.makedirs("downloads", exist_ok=True)
+        original_path = None
+        thumb_path = f"downloads/{uid}_thumb_norm.jpg"
+        try:
+            original_path = await message.download(
+                file_name=f"downloads/{uid}_thumb_orig"
+            )
+            proc = await asyncio.create_subprocess_exec(
+                'xtra', '-y', '-i', original_path,
+                '-vf', 'scale=320:-1', '-q:v', '2',
+                thumb_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            _, stderr = await proc.communicate()
+            if proc.returncode != 0 or not os.path.exists(thumb_path):
+                logger.error(f"Thumbnail normalize error: {stderr.decode()}")
+                source = original_path
+            else:
+                source = thumb_path
+            sent = await client.send_photo(DUMP_CHAT_ID, source)
+            set_user_setting(uid, thumbnail_file_id=sent.photo.file_id)
+            pending_inputs.pop(uid, None)
+            await message.reply_text(t(uid, "thumb_set_done"))
+            if session:
+                session["last_activity"] = time.time()
+                try:
+                    await session["message"].edit_text(
+                        await build_settings_status(client, uid),
+                        reply_markup=build_settings_menu_keyboard(token),
+                        parse_mode=None
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not refresh settings menu: {e}")
+        except Exception as e:
+            logger.error(f"Could not set custom thumbnail: {e}")
+            await message.reply_text(t(uid, "thumb_invalid"))
+        finally:
+            for path in (original_path, thumb_path):
+                try:
+                    if path and os.path.exists(path):
+                        os.remove(path)
+                except Exception:
+                    pass
+        return
+
+    if pending["type"] == "dest":
+        chat, error = await validate_leech_destination(client, uid, message.text)
+        if error:
+            await message.reply_text(error)
+            return
+        if isinstance(chat, int):
+            dest_id, dest_title = chat, str(chat)
+        else:
+            dest_id = chat.id
+            dest_title = chat.title or str(chat.id)
+        set_user_setting(uid, leech_destination=dest_id,
+                         leech_destination_title=dest_title)
+        pending_inputs.pop(uid, None)
+        await message.reply_text(t(uid, "dest_set_done", title=dest_title))
+        if session:
+            session["last_activity"] = time.time()
+            try:
+                await session["message"].edit_text(
+                    await build_settings_status(client, uid),
+                    reply_markup=build_settings_menu_keyboard(token),
+                    parse_mode=None
+                )
+            except Exception as e:
+                logger.warning(f"Could not refresh settings menu: {e}")
+        return
+
+@app.on_message(filters.photo)
+async def custom_thumbnail_photo(client: Client, message: Message):
+    if not message.from_user:
+        return
+    uid = message.from_user.id
+    pending = pending_inputs.get(uid)
+    if not pending or pending.get("type") != "thumb":
+        return
+    if time.time() > pending.get("expires", 0):
+        pending_inputs.pop(uid, None)
+        return
+    await handle_pending_input(client, message, pending)
+
+@app.on_message(filters.command("cancel"))
+async def cancel_pending_input(client: Client, message: Message):
+    if not message.from_user:
+        return
+    uid = message.from_user.id
+    pending = pending_inputs.pop(uid, None)
+    if not pending:
+        return
+    token = pending.get("token")
+    session = settings_sessions.get(token)
+    if session:
+        try:
+            await session["message"].edit_text(
+                await build_settings_status(client, uid),
+                reply_markup=build_settings_menu_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not restore settings menu after /cancel: {e}")
+    await message.reply_text(t(uid, "cancel_pending"))
 
 @app.on_message(filters.command("random"))
 async def random_video(client: Client, message: Message):
@@ -1090,6 +1395,14 @@ async def handle_message(client: Client, message: Message):
 
     user_id = message.from_user.id
 
+    pending = pending_inputs.get(user_id)
+    if pending:
+        if time.time() > pending.get("expires", 0):
+            pending_inputs.pop(user_id, None)
+        elif pending.get("type") == "dest":
+            await handle_pending_input(client, message, pending)
+            return
+
     if user_id == OWNER_ID:
         pass
     else:
@@ -1289,9 +1602,22 @@ async def handle_message(client: Client, message: Message):
 
     async def handle_upload():
         file_size = os.path.getsize(file_path)
-        thumb_bytes = None
         user_msgs = []
-        
+        delivered_to_custom = False
+        dest_copy_failed = False
+        custom_dest = get_user_setting(user_id, "leech_destination")
+        custom_thumb_path = None
+        custom_thumb_id = get_user_setting(user_id, "thumbnail_file_id")
+        if custom_thumb_id:
+            try:
+                os.makedirs("downloads", exist_ok=True)
+                custom_thumb_path = await client.download_media(
+                    custom_thumb_id,
+                    file_name=f"downloads/{user_id}_thumb_custom.jpg"
+                )
+            except Exception as e:
+                logger.warning(f"Could not download custom thumbnail: {e}")
+
         if file_size > SPLIT_SIZE:
             await update_status(
                 status_message,
@@ -1314,14 +1640,23 @@ async def handle_message(client: Client, message: Message):
                     )
                     
                     part_duration, part_width, part_height = await get_video_metadata(part)
-                    part_thumb = await generate_thumbnail(part, part_duration)
+                    part_thumb = custom_thumb_path or await generate_thumbnail(part, part_duration)
                     vkwargs = build_video_kwargs(part_caption, part_duration, part_width, part_height, part_thumb, upload_progress)
-                    
+
                     if USER_SESSION_STRING:
                         sent = await user.send_video(DUMP_CHAT_ID, part, **vkwargs)
                     else:
                         sent = await client.send_video(DUMP_CHAT_ID, part, **vkwargs)
-                    user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+                    if custom_dest:
+                        try:
+                            user_msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
+                            delivered_to_custom = True
+                        except Exception as e:
+                            logger.error(f"Could not copy part to custom destination {custom_dest}: {e}")
+                            user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+                            dest_copy_failed = True
+                    else:
+                        user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
                     if user_msg:
                         user_msgs.append(user_msg)
                     os.remove(part)
@@ -1339,29 +1674,59 @@ async def handle_message(client: Client, message: Message):
             )
             
             duration, width, height = await get_video_metadata(file_path)
-            thumb_bytes = await generate_thumbnail(file_path, duration)
-            vkwargs = build_video_kwargs(caption, duration, width, height, thumb_bytes, upload_progress)
-            
+            full_thumb = custom_thumb_path or await generate_thumbnail(file_path, duration)
+            vkwargs = build_video_kwargs(caption, duration, width, height, full_thumb, upload_progress)
+
             if USER_SESSION_STRING:
                 sent = await user.send_video(DUMP_CHAT_ID, file_path, **vkwargs)
             else:
                 sent = await client.send_video(DUMP_CHAT_ID, file_path, **vkwargs)
-            user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+            if custom_dest:
+                try:
+                    user_msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
+                    delivered_to_custom = True
+                except Exception as e:
+                    logger.error(f"Could not copy video to custom destination {custom_dest}: {e}")
+                    user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+                    dest_copy_failed = True
+            else:
+                user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
             if user_msg:
                 user_msgs.append(user_msg)
-        
-        for msg in user_msgs:
-            asyncio.create_task(delayed_delete(msg, 600))
-        warn = await client.send_message(
-            message.chat.id,
-            t(user_id, "file_deleted_warning")
-        )
-        asyncio.create_task(delayed_delete(warn, 600))
+
+        if delivered_to_custom:
+            dest_title = str(custom_dest)
+            try:
+                dest_chat = await client.get_chat(int(custom_dest))
+                dest_title = dest_chat.title or dest_title
+            except Exception as e:
+                logger.warning(f"Could not load destination chat title: {e}")
+            await client.send_message(
+                message.chat.id,
+                t(user_id, "dest_delivered", title=dest_title)
+            )
+            if dest_copy_failed:
+                await client.send_message(
+                    message.chat.id,
+                    t(user_id, "dest_send_failed")
+                )
+        else:
+            for msg in user_msgs:
+                asyncio.create_task(delayed_delete(msg, 600))
+            warn = await client.send_message(
+                message.chat.id,
+                t(user_id, "file_deleted_warning")
+            )
+            asyncio.create_task(delayed_delete(warn, 600))
+
+        if custom_thumb_path and os.path.exists(custom_thumb_path):
+            try:
+                os.remove(custom_thumb_path)
+            except Exception:
+                pass
 
         if os.path.exists(file_path):
             os.remove(file_path)
-        if thumb_bytes:
-            thumb_bytes = None
 
     start_time = datetime.now()
     await handle_upload()

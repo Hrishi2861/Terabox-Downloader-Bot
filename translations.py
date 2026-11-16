@@ -769,6 +769,264 @@ TRANSLATIONS["de"] = {
     "settings_title": "⚙️ Benutzereinstellungen",
 }
 
+# Extended keys for thumbnail and leech destination settings.
+EXTRA_TRANSLATIONS = {}
+
+EXTRA_TRANSLATIONS["en"] = {
+    "settings_status": "⚙️ User Settings\n\nLanguage: {language}\nThumbnail: {thumb}\nDestination: {dest}",
+    "dest_default": "Default (this chat)",
+    "thumb_set_prompt": "🖼️ Send me a photo now to set it as your custom thumbnail.",
+    "thumb_invalid": "❌ Could not process that image. Please try another photo.",
+    "thumb_set_done": "✅ Custom thumbnail set.",
+    "thumb_removed": "✅ Custom thumbnail removed.",
+    "dest_set_prompt": "📥 Send me your channel/group ID now (e.g. -1001234567890).",
+    "dest_set_done": "✅ Leech destination set: {title}",
+    "dest_removed": "✅ Leech destination removed. Videos will be sent to this chat.",
+    "dest_invalid": "❌ Invalid channel/group ID. It should look like -1001234567890. Send /user_settings to try again.",
+    "dest_no_access": "❌ I need to be an admin in that chat first. Add me there as admin and try again.",
+    "dest_not_admin": "❌ You must be an admin of that chat to set it as your destination.",
+    "dest_send_failed": "⚠️ Could not send to your destination, so I sent it here instead.",
+    "dest_delivered": "✅ Video delivered to your destination: {title}",
+    "cancel_pending": "❌ Pending setting cancelled.",
+}
+
+EXTRA_TRANSLATIONS["hi"] = {
+    "settings_status": "⚙️ उपयोगकर्ता सेटिंग्स\n\nभाषा: {language}\nथंबनेल: {thumb}\nगंतव्य: {dest}",
+    "dest_default": "डिफ़ॉल्ट (यह चैट)",
+    "thumb_set_prompt": "🖼️ कस्टम थंबनेल सेट करने के लिए अब मुझे एक फोटो भेजें।",
+    "thumb_invalid": "❌ वह इमेज प्रोसेस नहीं हो सकी। कृपया कोई अन्य फोटो भेजें।",
+    "thumb_set_done": "✅ कस्टम थंबनेल सेट हो गया।",
+    "thumb_removed": "✅ कस्टम थंबनेल हटा दिया गया।",
+    "dest_set_prompt": "📥 अब अपना चैनल/ग्रुप आईडी भेजें (जैसे -1001234567890)।",
+    "dest_set_done": "✅ लीच गंतव्य सेट: {title}",
+    "dest_removed": "✅ लीच गंतव्य हटा दिया गया। वीडियो अब इस चैट में भेजे जाएँगे।",
+    "dest_invalid": "❌ अमान्य चैनल/ग्रुप आईडी। यह -1001234567890 जैसी होनी चाहिए। फिर से कोशिश के लिए /user_settings भेजें।",
+    "dest_no_access": "❌ पहले मुझे उस चैट में एडमिन बनाएँ। मुझे वहाँ एडमिन जोड़ें और फिर से कोशिश करें।",
+    "dest_not_admin": "❌ उस चैट को गंतव्य बनाने के लिए आपको उसके एडमिन होना चाहिए।",
+    "dest_send_failed": "⚠️ आपके गंतव्य पर नहीं भेजा जा सका, इसलिए यहाँ भेज दिया।",
+    "dest_delivered": "✅ वीडियो आपके गंतव्य पर भेज दिया: {title}",
+    "cancel_pending": "❌ लंबित सेटिंग रद्द कर दी गई।",
+}
+
+EXTRA_TRANSLATIONS["mr"] = {
+    "settings_status": "⚙️ वापरकर्ता सेटिंग्ज\n\nभाषा: {language}\nथंबनेल: {thumb}\nगंतव्य: {dest}",
+    "dest_default": "डीफॉल्ट (ही चॅट)",
+    "thumb_set_prompt": "🖼️ सानुकूल थंबनेल सेट करण्यासाठी आता मला फोटो पाठवा.",
+    "thumb_invalid": "❌ ती प्रतिमा प्रक्रिया करता आली नाही. कृपया दुसरा फोटो पाठवा.",
+    "thumb_set_done": "✅ सानुकूल थंबनेल सेट झाले.",
+    "thumb_removed": "✅ सानुकूल थंबनेल काढले.",
+    "dest_set_prompt": "📥 आता तुमचा चॅनेल/ग्रुप आयडी पाठवा (उदा. -1001234567890).",
+    "dest_set_done": "✅ लीच गंतव्य सेट: {title}",
+    "dest_removed": "✅ लीच गंतव्य काढले. व्हिडिओ आता या चॅटमध्ये पाठवले जातील.",
+    "dest_invalid": "❌ अवैध चॅनेल/ग्रुप आयडी. तो -1001234567890 सारखा असावा. पुन्हा प्रयत्न करण्यासाठी /user_settings पाठवा.",
+    "dest_no_access": "❌ प्रथम त्या चॅटमध्ये मला ॲडमिन करा. मला ॲडमिन म्हणून जोडा आणि पुन्हा प्रयत्न करा.",
+    "dest_not_admin": "❌ ते गंतव्य ठेवण्यासाठी तुम्ही त्या चॅटचे ॲडमिन असले पाहिजे.",
+    "dest_send_failed": "⚠️ तुमच्या गंतव्यास पाठवता आले नाही, म्हणून येथे पाठवले.",
+    "dest_delivered": "✅ व्हिडिओ तुमच्या गंतव्यास पाठवला: {title}",
+    "cancel_pending": "❌ प्रलंबित सेटिंग रद्द केली.",
+}
+
+EXTRA_TRANSLATIONS["bn"] = {
+    "settings_status": "⚙️ ব্যবহারকারীর সেটিংস\n\nভাষা: {language}\nথাম্বনেইল: {thumb}\nগন্তব্য: {dest}",
+    "dest_default": "ডিফল্ট (এই চ্যাট)",
+    "thumb_set_prompt": "🖼️ কাস্টম থাম্বনেইল সেট করতে এখন আমাকে একটি ছবি পাঠান।",
+    "thumb_invalid": "❌ ছবিটি প্রসেস করা যায়নি। অনুগ্রহ করে অন্য একটি ছবি পাঠান।",
+    "thumb_set_done": "✅ কাস্টম থাম্বনেইল সেট হয়েছে।",
+    "thumb_removed": "✅ কাস্টম থাম্বনেইল সরানো হয়েছে।",
+    "dest_set_prompt": "📥 এখন আপনার চ্যানেল/গ্রুপ আইডি পাঠান (যেমন -1001234567890)।",
+    "dest_set_done": "✅ লিচ গন্তব্য সেট: {title}",
+    "dest_removed": "✅ লিচ গন্তব্য সরানো হয়েছে। ভিডিও এখন এই চ্যাটে পাঠানো হবে।",
+    "dest_invalid": "❌ অবৈধ চ্যানেল/গ্রুপ আইডি। এটি -1001234567890 এর মতো হওয়া উচিত। আবার চেষ্টা করতে /user_settings পাঠান।",
+    "dest_no_access": "❌ প্রথমে আমাকে সেই চ্যাটে অ্যাডমিন করুন। আমাকে অ্যাডমিন করে আবার চেষ্টা করুন।",
+    "dest_not_admin": "❌ গন্তব্য হিসেবে সেট করতে আপনাকে সেই চ্যাটের অ্যাডমিন হতে হবে।",
+    "dest_send_failed": "⚠️ আপনার গন্তব্যে পাঠানো যায়নি, তাই এখানে পাঠানো হলো।",
+    "dest_delivered": "✅ ভিডিও আপনার গন্তব্যে পাঠানো হয়েছে: {title}",
+    "cancel_pending": "❌ অপেক্ষমাণ সেটিং বাতিল করা হয়েছে।",
+}
+
+EXTRA_TRANSLATIONS["ta"] = {
+    "settings_status": "⚙️ பயனர் அமைப்புகள்\n\nமொழி: {language}\nசிறுபடம்: {thumb}\nஇலக்கு: {dest}",
+    "dest_default": "இயல்புநிலை (இந்த அரட்டை)",
+    "thumb_set_prompt": "🖼️ தனிப்பயன் சிறுபடமாக அமைக்க இப்போது எனக்கு ஒரு படத்தை அனுப்புங்கள்.",
+    "thumb_invalid": "❌ அந்த படத்தை செயலாக்க முடியவில்லை. வேறு படம் அனுப்புங்கள்.",
+    "thumb_set_done": "✅ தனிப்பயன் சிறுபடம் அமைக்கப்பட்டது.",
+    "thumb_removed": "✅ தனிப்பயன் சிறுபடம் நீக்கப்பட்டது.",
+    "dest_set_prompt": "📥 இப்போது உங்கள் சேனல்/குழு ஐடியை அனுப்புங்கள் (எ.கா. -1001234567890).",
+    "dest_set_done": "✅ இலக்கு அமைக்கப்பட்டது: {title}",
+    "dest_removed": "✅ இலக்கு நீக்கப்பட்டது. வீடியோக்கள் இனி இந்த அரட்டைக்கு அனுப்பப்படும்.",
+    "dest_invalid": "❌ தவறான சேனல்/குழு ஐடி. அது -1001234567890 போல இருக்க வேண்டும். மீண்டும் முயற்சிக்க /user_settings அனுப்புங்கள்.",
+    "dest_no_access": "❌ முதலில் அந்த அரட்டையில் என்னை நிர்வாகியாக ஆக்குங்கள். என்னை நிர்வாகியாகச் சேர்த்து மீண்டும் முயற்சிக்கவும்.",
+    "dest_not_admin": "❌ இலக்காக அமைக்க நீங்கள் அந்த அரட்டையின் நிர்வாகியாக இருக்க வேண்டும்.",
+    "dest_send_failed": "⚠️ உங்கள் இலக்குக்கு அனுப்ப முடியவில்லை, எனவே இங்கே அனுப்பினேன்.",
+    "dest_delivered": "✅ வீடியோ உங்கள் இலக்குக்கு அனுப்பப்பட்டது: {title}",
+    "cancel_pending": "❌ நிலுவையில் உள்ள அமைப்பு ரத்து செய்யப்பட்டது.",
+}
+
+EXTRA_TRANSLATIONS["te"] = {
+    "settings_status": "⚙️ యూజర్ సెట్టింగ్‌లు\n\nభాష: {language}\nథంబ్‌నెయిల్: {thumb}\nగమ్యం: {dest}",
+    "dest_default": "డిఫాల్ట్ (ఈ చాట్)",
+    "thumb_set_prompt": "🖼️ కస్టమ్ థంబ్‌నెయిల్‌గా సెట్ చేయడానికి ఇప్పుడు నాకు ఒక ఫోటో పంపండి.",
+    "thumb_invalid": "❌ ఆ చిత్రాన్ని ప్రాసెస్ చేయడం సాధ్యం కాలేదు. దయచేసి మరో ఫోటో పంపండి.",
+    "thumb_set_done": "✅ కస్టమ్ థంబ్‌నెయిల్ సెట్ చేయబడింది.",
+    "thumb_removed": "✅ కస్టమ్ థంబ్‌నెయిల్ తీసివేయబడింది.",
+    "dest_set_prompt": "📥 ఇప్పుడు మీ ఛానల్/గ్రూప్ ఐడీ పంపండి (ఉదా. -1001234567890).",
+    "dest_set_done": "✅ లీచ్ గమ్యం సెట్ చేయబడింది: {title}",
+    "dest_removed": "✅ లీచ్ గమ్యం తీసివేయబడింది. వీడియోలు ఇప్పుడు ఈ చాట్‌కు పంపబడతాయి.",
+    "dest_invalid": "❌ తప్పు ఛానల్/గ్రూప్ ఐడీ. అది -1001234567890 లాగా ఉండాలి. మళ్లీ ప్రయత్నించడానికి /user_settings పంపండి.",
+    "dest_no_access": "❌ ముందుగా ఆ చాట్‌లో నన్ను అడ్మిన్‌గా చేయండి. నన్ను అడ్మిన్‌గా జోడించి మళ్లీ ప్రయత్నించండి.",
+    "dest_not_admin": "❌ గమ్యంగా సెట్ చేయడానికి మీరు ఆ చాట్‌కు అడ్మిన్ కావాలి.",
+    "dest_send_failed": "⚠️ మీ గమ్యానికి పంపలేకపోయాను, కాబట్టి ఇక్కడికి పంపాను.",
+    "dest_delivered": "✅ వీడియో మీ గమ్యానికి పంపబడింది: {title}",
+    "cancel_pending": "❌ పెండింగ్ సెట్టింగ్ రద్దు చేయబడింది.",
+}
+
+EXTRA_TRANSLATIONS["kn"] = {
+    "settings_status": "⚙️ ಬಳಕೆದಾರರ ಸೆಟ್ಟಿಂಗ್‌ಗಳು\n\nಭಾಷೆ: {language}\nಥಂಬ್‌ನೇಲ್: {thumb}\nಗುರಿ: {dest}",
+    "dest_default": "ಡೀಫಾಲ್ಟ್ (ಈ ಚಾಟ್)",
+    "thumb_set_prompt": "🖼️ ಕಸ್ಟಮ್ ಥಂಬ್‌ನೇಲ್ ಆಗಿ ಹೊಂದಿಸಲು ಈಗ ನನಗೆ ಒಂದು ಫೋಟೋ ಕಳುಹಿಸಿ.",
+    "thumb_invalid": "❌ ಆ ಚಿತ್ರವನ್ನು ಪ್ರೋಸೆಸ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೇರೊಂದು ಫೋಟೋ ಕಳುಹಿಸಿ.",
+    "thumb_set_done": "✅ ಕಸ್ಟಮ್ ಥಂಬ್‌ನೇಲ್ ಹೊಂದಿಸಲಾಗಿದೆ.",
+    "thumb_removed": "✅ ಕಸ್ಟಮ್ ಥಂಬ್‌ನೇಲ್ ತೆಗೆದುಹಾಕಲಾಗಿದೆ.",
+    "dest_set_prompt": "📥 ಈಗ ನಿಮ್ಮ ಚಾನೆಲ್/ಗ್ರೂಪ್ ಐಡಿ ಕಳುಹಿಸಿ (ಉದಾ. -1001234567890).",
+    "dest_set_done": "✅ ಲೀಚ್ ಗುರಿ ಹೊಂದಿಸಲಾಗಿದೆ: {title}",
+    "dest_removed": "✅ ಲೀಚ್ ಗುರಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ. ವೀಡಿಯೊಗಳು ಈಗ ಈ ಚಾಟ್‌ಗೆ ಕಳುಹಿಸಲ್ಪಡುತ್ತವೆ.",
+    "dest_invalid": "❌ ಅಮಾನ್ಯ ಚಾನೆಲ್/ಗ್ರೂಪ್ ಐಡಿ. ಅದು -1001234567890 ನಂತೆ ಇರಬೇಕು. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಲು /user_settings ಕಳುಹಿಸಿ.",
+    "dest_no_access": "❌ ಮೊದಲು ಆ ಚಾಟ್‌ನಲ್ಲಿ ನನ್ನನ್ನು ಅಡ್ಮಿನ್ ಮಾಡಿ. ನನ್ನನ್ನು ಅಡ್ಮಿನ್ ಆಗಿ ಸೇರಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "dest_not_admin": "❌ ಗುರಿಯಾಗಿ ಹೊಂದಿಸಲು ನೀವು ಆ ಚಾಟ್‌ನ ಅಡ್ಮಿನ್ ಆಗಿರಬೇಕು.",
+    "dest_send_failed": "⚠️ ನಿಮ್ಮ ಗುರಿಗೆ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಇಲ್ಲಿ ಕಳುಹಿಸಿದೆ.",
+    "dest_delivered": "✅ ವೀಡಿಯೊ ನಿಮ್ಮ ಗುರಿಗೆ ಕಳುಹಿಸಲಾಗಿದೆ: {title}",
+    "cancel_pending": "❌ ಬಾಕಿ ಇರುವ ಸೆಟ್ಟಿಂಗ್ ರದ್ದುಪಡಿಸಲಾಗಿದೆ.",
+}
+
+EXTRA_TRANSLATIONS["ml"] = {
+    "settings_status": "⚙️ ഉപയോക്തൃ ക്രമീകരണങ്ങൾ\n\nഭാഷ: {language}\nതംബ്നെയിൽ: {thumb}\nലക്ഷ്യം: {dest}",
+    "dest_default": "സ്ഥിരസ്ഥിതി (ഈ ചാറ്റ്)",
+    "thumb_set_prompt": "🖼️ ഇഷ്ടാനുസൃത തംബ്നെയിൽ ആയി സജ്ജമാക്കാൻ ഇപ്പോൾ എനിക്ക് ഒരു ഫോട്ടോ അയയ്ക്കുക.",
+    "thumb_invalid": "❌ ആ ചിത്രം പ്രോസസ്സ് ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി മറ്റൊരു ഫോട്ടോ അയയ്ക്കുക.",
+    "thumb_set_done": "✅ ഇഷ്ടാനുസൃത തംബ്നെയിൽ സജ്ജമാക്കി.",
+    "thumb_removed": "✅ ഇഷ്ടാനുസൃത തംബ്നെയിൽ നീക്കം ചെയ്തു.",
+    "dest_set_prompt": "📥 ഇപ്പോൾ നിങ്ങളുടെ ചാനൽ/ഗ്രൂപ്പ് ഐഡി അയയ്ക്കുക (ഉദാ. -1001234567890).",
+    "dest_set_done": "✅ ലീച്ച് ലക്ഷ്യം സജ്ജമാക്കി: {title}",
+    "dest_removed": "✅ ലീച്ച് ലക്ഷ്യം നീക്കം ചെയ്തു. വീഡിയോകൾ ഇനി ഈ ചാറ്റിലേക്ക് അയയ്ക്കും.",
+    "dest_invalid": "❌ അസാധുവായ ചാനൽ/ഗ്രൂപ്പ് ഐഡി. അത് -1001234567890 പോലെ ആയിരിക്കണം. വീണ്ടും ശ്രമിക്കാൻ /user_settings അയയ്ക്കുക.",
+    "dest_no_access": "❌ ആദ്യം ആ ചാറ്റിൽ എന്നെ അഡ്മിൻ ആക്കുക. എന്നെ അഡ്മിനായി ചേർത്ത് വീണ്ടും ശ്രമിക്കുക.",
+    "dest_not_admin": "❌ ലക്ഷ്യമായി സജ്ജമാക്കാൻ നിങ്ങൾ ആ ചാറ്റിന്റെ അഡ്മിൻ ആയിരിക്കണം.",
+    "dest_send_failed": "⚠️ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് അയയ്ക്കാൻ കഴിഞ്ഞില്ല, അതിനാൽ ഇവിടെ അയച്ചു.",
+    "dest_delivered": "✅ വീഡിയോ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് അയച്ചു: {title}",
+    "cancel_pending": "❌ താൽക്കാലിക ക്രമീകരണം റദ്ദാക്കി.",
+}
+
+EXTRA_TRANSLATIONS["ur"] = {
+    "settings_status": "⚙️ صارف سیٹنگز\n\nزبان: {language}\nتھمب نیل: {thumb}\nمنزل: {dest}",
+    "dest_default": "ڈیفالٹ (یہ چیٹ)",
+    "thumb_set_prompt": "🖼️ اپنی مرضی کا تھمب نیل مقرر کرنے کے لیے اب مجھے ایک تصویر بھیجیں۔",
+    "thumb_invalid": "❌ وہ تصویر پروسیس نہیں ہو سکی۔ براہ کرم کوئی اور تصویر بھیجیں۔",
+    "thumb_set_done": "✅ اپنی مرضی کا تھمب نیل مقرر ہو گیا۔",
+    "thumb_removed": "✅ اپنی مرضی کا تھمب نیل ہٹا دیا گیا۔",
+    "dest_set_prompt": "📥 اب اپنا چینل/گروپ آئی ڈی بھیجیں (مثلاً -1001234567890)۔",
+    "dest_set_done": "✅ لیز منزل مقرر: {title}",
+    "dest_removed": "✅ لیز منزل ہٹا دی گئی۔ ویڈیوز اب اسی چیٹ میں بھیجی جائیں گی۔",
+    "dest_invalid": "❌ غلط چینل/گروپ آئی ڈی۔ یہ -1001234567890 جیسی ہونی چاہیے۔ دوبارہ کوشش کے لیے /user_settings بھیجیں۔",
+    "dest_no_access": "❌ پہلے مجھے اس چیٹ میں ایڈمن بنائیں۔ مجھے ایڈمن کے طور پر شامل کریں اور دوبارہ کوشش کریں۔",
+    "dest_not_admin": "❌ منزل مقرر کرنے کے لیے آپ کا اس چیٹ کا ایڈمن ہونا ضروری ہے۔",
+    "dest_send_failed": "⚠️ آپ کی منزل تک نہیں بھیجی جا سکی، اس لیے یہاں بھیج دیا۔",
+    "dest_delivered": "✅ ویڈیو آپ کی منزل پر بھیج دی گئی: {title}",
+    "cancel_pending": "❌ زیر التوا سیٹنگ منسوخ کر دی گئی۔",
+}
+
+EXTRA_TRANSLATIONS["pa"] = {
+    "settings_status": "⚙️ ਵਰਤੋਂਕਾਰ ਸੈਟਿੰਗਾਂ\n\nਭਾਸ਼ਾ: {language}\nਥੰਮਨੇਲ: {thumb}\nਮੰਜ਼ਿਲ: {dest}",
+    "dest_default": "ਮੂਲ (ਇਹ ਚੈਟ)",
+    "thumb_set_prompt": "🖼️ ਕਸਟਮ ਥੰਮਨੇਲ ਸੈੱਟ ਕਰਨ ਲਈ ਹੁਣ ਮੈਨੂੰ ਇੱਕ ਫੋਟੋ ਭੇਜੋ।",
+    "thumb_invalid": "❌ ਉਹ ਤਸਵੀਰ ਪ੍ਰੋਸੈਸ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਿਰਪਾ ਕਰਕੇ ਹੋਰ ਫੋਟੋ ਭੇਜੋ।",
+    "thumb_set_done": "✅ ਕਸਟਮ ਥੰਮਨੇਲ ਸੈੱਟ ਹੋ ਗਿਆ।",
+    "thumb_removed": "✅ ਕਸਟਮ ਥੰਮਨੇਲ ਹਟਾ ਦਿੱਤਾ ਗਿਆ।",
+    "dest_set_prompt": "📥 ਹੁਣ ਆਪਣੀ ਚੈਨਲ/ਗਰੁੱਪ ਆਈਡੀ ਭੇਜੋ (ਜਿਵੇਂ -1001234567890)।",
+    "dest_set_done": "✅ ਲੀਚ ਮੰਜ਼ਿਲ ਸੈੱਟ: {title}",
+    "dest_removed": "✅ ਲੀਚ ਮੰਜ਼ਿਲ ਹਟਾ ਦਿੱਤੀ ਗਈ। ਵੀਡੀਓ ਹੁਣ ਇਸ ਚੈਟ ਵਿੱਚ ਭੇਜੇ ਜਾਣਗੇ।",
+    "dest_invalid": "❌ ਗਲਤ ਚੈਨਲ/ਗਰੁੱਪ ਆਈਡੀ। ਇਹ -1001234567890 ਵਰਗੀ ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਲਈ /user_settings ਭੇਜੋ।",
+    "dest_no_access": "❌ ਪਹਿਲਾਂ ਮੈਨੂੰ ਉਸ ਚੈਟ ਵਿੱਚ ਐਡਮਿਨ ਬਣਾਓ। ਮੈਨੂੰ ਐਡਮਿਨ ਵਜੋਂ ਜੋੜੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+    "dest_not_admin": "❌ ਮੰਜ਼ਿਲ ਸੈੱਟ ਕਰਨ ਲਈ ਤੁਹਾਨੂੰ ਉਸ ਚੈਟ ਦਾ ਐਡਮਿਨ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।",
+    "dest_send_failed": "⚠️ ਤੁਹਾਡੀ ਮੰਜ਼ਿਲ 'ਤੇ ਨਹੀਂ ਭੇਜਿਆ ਜਾ ਸਕਿਆ, ਇਸ ਲਈ ਇੱਥੇ ਭੇਜ ਦਿੱਤਾ।",
+    "dest_delivered": "✅ ਵੀਡੀਓ ਤੁਹਾਡੀ ਮੰਜ਼ਿਲ 'ਤੇ ਭੇਜ ਦਿੱਤਾ ਗਿਆ: {title}",
+    "cancel_pending": "❌ ਬਾਕੀ ਸੈਟਿੰਗ ਰੱਦ ਕਰ ਦਿੱਤੀ ਗਈ।",
+}
+
+EXTRA_TRANSLATIONS["gu"] = {
+    "settings_status": "⚙️ વપરાશકર્તા સેટિંગ્સ\n\nભાષા: {language}\nથંબનેલ: {thumb}\nમુકામ: {dest}",
+    "dest_default": "ડિફોલ્ટ (આ ચેટ)",
+    "thumb_set_prompt": "🖼️ કસ્ટમ થંબનેલ તરીકે સેટ કરવા હવે મને એક ફોટો મોકલો.",
+    "thumb_invalid": "❌ એ ઇમેજ પ્રોસેસ કરી શકાઈ નહીં. કૃપા કરીને બીજો ફોટો મોકલો.",
+    "thumb_set_done": "✅ કસ્ટમ થંબનેલ સેટ થયું.",
+    "thumb_removed": "✅ કસ્ટમ થંબનેલ દૂર કર્યું.",
+    "dest_set_prompt": "📥 હવે તમારી ચેનલ/ગ્રુપ આઈડી મોકલો (દા.ત. -1001234567890).",
+    "dest_set_done": "✅ લીચ મુકામ સેટ: {title}",
+    "dest_removed": "✅ લીચ મુકામ દૂર કર્યો. વિડિયો હવે આ ચેટમાં મોકલાશે.",
+    "dest_invalid": "❌ ખોટી ચેનલ/ગ્રુપ આઈડી. તે -1001234567890 જેવી હોવી જોઈએ. ફરી પ્રયાસ માટે /user_settings મોકલો.",
+    "dest_no_access": "❌ પહેલા મને એ ચેટમાં એડમિન બનાવો. મને એડમિન તરીકે ઉમેરો અને ફરી પ્રયાસ કરો.",
+    "dest_not_admin": "❌ મુકામ તરીકે સેટ કરવા તમારે એ ચેટના એડમિન હોવા જોઈએ.",
+    "dest_send_failed": "⚠️ તમારા મુકામે મોકલી શકાયું નહીં, એટલે અહીં મોકલ્યું.",
+    "dest_delivered": "✅ વિડિયો તમારા મુકામે મોકલ્યો: {title}",
+    "cancel_pending": "❌ બાકી સેટિંગ રદ કરી.",
+}
+
+EXTRA_TRANSLATIONS["es"] = {
+    "settings_status": "⚙️ Ajustes de usuario\n\nIdioma: {language}\nMiniatura: {thumb}\nDestino: {dest}",
+    "dest_default": "Predeterminado (este chat)",
+    "thumb_set_prompt": "🖼️ Envíame ahora una foto para establecerla como miniatura personalizada.",
+    "thumb_invalid": "❌ No se pudo procesar esa imagen. Envía otra foto.",
+    "thumb_set_done": "✅ Miniatura personalizada establecida.",
+    "thumb_removed": "✅ Miniatura personalizada eliminada.",
+    "dest_set_prompt": "📥 Envíame ahora el ID de tu canal/grupo (p. ej. -1001234567890).",
+    "dest_set_done": "✅ Destino establecido: {title}",
+    "dest_removed": "✅ Destino eliminado. Los vídeos se enviarán a este chat.",
+    "dest_invalid": "❌ ID de canal/grupo no válido. Debe ser como -1001234567890. Envía /user_settings para intentarlo de nuevo.",
+    "dest_no_access": "❌ Primero debo ser administrador en ese chat. Agrégame como admin e inténtalo de nuevo.",
+    "dest_not_admin": "❌ Debes ser administrador de ese chat para establecerlo como destino.",
+    "dest_send_failed": "⚠️ No se pudo enviar a tu destino, así que lo envié aquí.",
+    "dest_delivered": "✅ Vídeo entregado en tu destino: {title}",
+    "cancel_pending": "❌ Configuración pendiente cancelada.",
+}
+
+EXTRA_TRANSLATIONS["fr"] = {
+    "settings_status": "⚙️ Paramètres utilisateur\n\nLangue : {language}\nMiniature : {thumb}\nDestination : {dest}",
+    "dest_default": "Par défaut (ce chat)",
+    "thumb_set_prompt": "🖼️ Envoyez-moi maintenant une photo pour la définir comme miniature personnalisée.",
+    "thumb_invalid": "❌ Impossible de traiter cette image. Envoyez une autre photo.",
+    "thumb_set_done": "✅ Miniature personnalisée définie.",
+    "thumb_removed": "✅ Miniature personnalisée supprimée.",
+    "dest_set_prompt": "📥 Envoyez-moi maintenant l'ID de votre canal/groupe (ex. -1001234567890).",
+    "dest_set_done": "✅ Destination définie : {title}",
+    "dest_removed": "✅ Destination supprimée. Les vidéos seront envoyées dans ce chat.",
+    "dest_invalid": "❌ ID de canal/groupe invalide. Il doit ressembler à -1001234567890. Envoyez /user_settings pour réessayer.",
+    "dest_no_access": "❌ Je dois d'abord être administrateur dans ce chat. Ajoutez-moi comme admin et réessayez.",
+    "dest_not_admin": "❌ Vous devez être administrateur de ce chat pour le définir comme destination.",
+    "dest_send_failed": "⚠️ Impossible d'envoyer vers votre destination, je l'ai donc envoyé ici.",
+    "dest_delivered": "✅ Vidéo livrée à votre destination : {title}",
+    "cancel_pending": "❌ Réglage en attente annulé.",
+}
+
+EXTRA_TRANSLATIONS["de"] = {
+    "settings_status": "⚙️ Benutzereinstellungen\n\nSprache: {language}\nVorschaubild: {thumb}\nZiel: {dest}",
+    "dest_default": "Standard (dieser Chat)",
+    "thumb_set_prompt": "🖼️ Sende mir jetzt ein Foto, um es als eigenes Vorschaubild festzulegen.",
+    "thumb_invalid": "❌ Dieses Bild konnte nicht verarbeitet werden. Bitte sende ein anderes Foto.",
+    "thumb_set_done": "✅ Eigenes Vorschaubild festgelegt.",
+    "thumb_removed": "✅ Eigenes Vorschaubild entfernt.",
+    "dest_set_prompt": "📥 Sende mir jetzt deine Kanal-/Gruppen-ID (z. B. -1001234567890).",
+    "dest_set_done": "✅ Leech-Ziel festgelegt: {title}",
+    "dest_removed": "✅ Leech-Ziel entfernt. Videos werden an diesen Chat gesendet.",
+    "dest_invalid": "❌ Ungültige Kanal-/Gruppen-ID. Sie muss wie -1001234567890 aussehen. Sende /user_settings, um es erneut zu versuchen.",
+    "dest_no_access": "❌ Ich muss zuerst Admin in diesem Chat sein. Füge mich als Admin hinzu und versuche es erneut.",
+    "dest_not_admin": "❌ Du musst Admin dieses Chats sein, um es als Ziel festzulegen.",
+    "dest_send_failed": "⚠️ Es konnte nicht an dein Ziel gesendet werden, daher habe ich es hierher gesendet.",
+    "dest_delivered": "✅ Video an dein Ziel zugestellt: {title}",
+    "cancel_pending": "❌ Ausstehende Einstellung abgebrochen.",
+}
+
+for _code, _extra in EXTRA_TRANSLATIONS.items():
+    TRANSLATIONS[_code].update(_extra)
+
 
 
 
