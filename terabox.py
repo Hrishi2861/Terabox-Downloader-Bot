@@ -429,6 +429,9 @@ def build_language_grid_keyboard(token, selected):
         rows.append([InlineKeyboardButton(
             confirm_label, callback_data=f"us:confirm:{token}"
         )])
+    rows.append([InlineKeyboardButton(
+        "← Back", callback_data=f"us:back:{token}"
+    )])
     return InlineKeyboardMarkup(rows)
 
 async def expire_settings_session(token):
