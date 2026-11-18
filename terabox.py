@@ -389,19 +389,33 @@ def build_settings_menu_keyboard(token):
         [InlineKeyboardButton("❌ Close", callback_data=f"us:close:{token}")],
     ])
 
-def build_thumb_submenu_keyboard(token):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🖼️ Set", callback_data=f"us:thumbset:{token}"),
-         InlineKeyboardButton("🗑️ Remove", callback_data=f"us:thumbdel:{token}")],
-        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
-    ])
+def build_thumb_submenu_keyboard(token, has_thumb=False):
+    rows = []
+    if has_thumb:
+        rows.append([
+            InlineKeyboardButton("🖼️ Set", callback_data=f"us:thumbset:{token}"),
+            InlineKeyboardButton("🗑️ Remove", callback_data=f"us:thumbdel:{token}")
+        ])
+    else:
+        rows.append([
+            InlineKeyboardButton("🖼️ Set", callback_data=f"us:thumbset:{token}")
+        ])
+    rows.append([InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")])
+    return InlineKeyboardMarkup(rows)
 
-def build_dest_submenu_keyboard(token):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📥 Set", callback_data=f"us:destset:{token}"),
-         InlineKeyboardButton("🗑️ Remove", callback_data=f"us:destdel:{token}")],
-        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
-    ])
+def build_dest_submenu_keyboard(token, has_dest=False):
+    rows = []
+    if has_dest:
+        rows.append([
+            InlineKeyboardButton("📥 Set", callback_data=f"us:destset:{token}"),
+            InlineKeyboardButton("🗑️ Remove", callback_data=f"us:destdel:{token}")
+        ])
+    else:
+        rows.append([
+            InlineKeyboardButton("📥 Set", callback_data=f"us:destset:{token}")
+        ])
+    rows.append([InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")])
+    return InlineKeyboardMarkup(rows)
 
 def build_settings_back_keyboard(token):
     return InlineKeyboardMarkup([
@@ -887,7 +901,9 @@ async def user_settings_callback(client: Client, callback_query):
         try:
             await callback_query.message.edit_text(
                 await build_settings_status(client, uid),
-                reply_markup=build_thumb_submenu_keyboard(token),
+                reply_markup=build_thumb_submenu_keyboard(
+                    token, bool(get_user_setting(uid, "thumbnail_file_id"))
+                ),
                 parse_mode=None
             )
         except Exception as e:
@@ -929,7 +945,9 @@ async def user_settings_callback(client: Client, callback_query):
         try:
             await callback_query.message.edit_text(
                 await build_settings_status(client, uid),
-                reply_markup=build_dest_submenu_keyboard(token),
+                reply_markup=build_dest_submenu_keyboard(
+                    token, bool(get_user_setting(uid, "leech_destination"))
+                ),
                 parse_mode=None
             )
         except Exception as e:
