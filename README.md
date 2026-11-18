@@ -14,7 +14,9 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
   ਪੰਜਾਬੀ, ગુજરાતી, Español, Français, Deutsch). The chosen language is
   saved per user and confirmed with a button in that language.
 - `/user_settings` also offers **🖼️ Thumbnail** and **📥 Leech Destination**
-  options (with `← Back` navigation in every sub-menu):
+  options (with `← Back` navigation in every sub-menu) and a **❌ Close**
+  button that deletes the settings menu along with the `/user_settings`
+  command message:
   - **Thumbnail:** send a photo to set a custom video thumbnail. It is
     normalized to a small JPEG and applied to uploaded videos (including
     every part of split uploads). Remove restores auto-generated thumbs.

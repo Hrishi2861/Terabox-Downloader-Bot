@@ -386,6 +386,7 @@ def build_settings_menu_keyboard(token):
         [InlineKeyboardButton("Language/भाषा", callback_data=f"us:open:{token}")],
         [InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"us:thumb:{token}")],
         [InlineKeyboardButton("📥 Leech Destination", callback_data=f"us:dest:{token}")],
+        [InlineKeyboardButton("❌ Close", callback_data=f"us:close:{token}")],
     ])
 
 def build_thumb_submenu_keyboard(token):
@@ -748,6 +749,7 @@ async def user_settings_cmd(client: Client, message: Message):
         "user_id": uid,
         "selected": get_user_lang(uid),
         "message": None,
+        "cmd_message": message,
         "last_activity": time.time()
     }
 
@@ -789,6 +791,24 @@ async def user_settings_callback(client: Client, callback_query):
 
     uid = session["user_id"]
     session["last_activity"] = time.time()
+
+    if action == "close":
+        pending = pending_inputs.get(uid)
+        if pending and pending.get("token") == token:
+            pending_inputs.pop(uid, None)
+        settings_sessions.pop(token, None)
+        await callback_query.answer()
+        try:
+            await callback_query.message.delete()
+        except Exception as e:
+            logger.warning(f"Could not delete settings menu message: {e}")
+        cmd_message = session.get("cmd_message")
+        if cmd_message is not None:
+            try:
+                await cmd_message.delete()
+            except Exception as e:
+                logger.warning(f"Could not delete /user_settings command message: {e}")
+        return
 
     if action == "open":
         await callback_query.answer()
