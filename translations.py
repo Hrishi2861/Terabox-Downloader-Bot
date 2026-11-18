@@ -1027,6 +1027,27 @@ EXTRA_TRANSLATIONS["de"] = {
 for _code, _extra in EXTRA_TRANSLATIONS.items():
     TRANSLATIONS[_code].update(_extra)
 
+# Hint shown in the /start welcome message pointing users to settings.
+WELCOME_SETTINGS_HINTS = {
+    "en": "🌐 Send /user_settings anytime to change your language and more.",
+    "hi": "🌐 अपनी भाषा और अन्य सेटिंग्स बदलने के लिए कभी भी /user_settings भेजें।",
+    "mr": "🌐 तुमची भाषा आणि अधिक बदलण्यासाठी कधीही /user_settings पाठवा.",
+    "bn": "🌐 আপনার ভাষা ও আরও সেটিংস বদলাতে যেকোনো সময় /user_settings পাঠান।",
+    "ta": "🌐 உங்கள் மொழி மற்றும் பலவற்றை மாற்ற எப்போதும் /user_settings அனுப்புங்கள்.",
+    "te": "🌐 మీ భాష మరియు మరిన్ని మార్చడానికి ఎప్పుడైనా /user_settings పంపండి.",
+    "kn": "🌐 ನಿಮ್ಮ ಭಾಷೆ ಮತ್ತು ಹೆಚ್ಚಿನದನ್ನು ಬದಲಿಸಲು ಯಾವಾಗ ಬೇಕಾದರೂ /user_settings ಕಳುಹಿಸಿ.",
+    "ml": "🌐 നിങ്ങളുടെ ഭാഷയും കൂടുതലും മാറ്റാൻ എപ്പോൾ വേണമെങ്കിലും /user_settings അയയ്ക്കുക.",
+    "ur": "🌐 اپنی زبان اور مزید سیٹنگز بدلنے کے لیے کبھی بھی /user_settings بھیجیں۔",
+    "pa": "🌐 ਆਪਣੀ ਭਾਸ਼ਾ ਅਤੇ ਹੋਰ ਬਦਲਣ ਲਈ ਕਦੇ ਵੀ /user_settings ਭੇਜੋ।",
+    "gu": "🌐 તમારી ભાષા અને વધુ બદલવા માટે ગમે ત્યારે /user_settings મોકલો.",
+    "es": "🌐 Envía /user_settings cuando quieras para cambiar tu idioma y más.",
+    "fr": "🌐 Envoyez /user_settings à tout moment pour changer de langue et plus.",
+    "de": "🌐 Sende jederzeit /user_settings, um deine Sprache und mehr zu ändern.",
+}
+
+for _code, _hint in WELCOME_SETTINGS_HINTS.items():
+    TRANSLATIONS[_code]["welcome_settings"] = _hint
+
 
 
 

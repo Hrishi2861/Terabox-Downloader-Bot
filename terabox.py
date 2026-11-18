@@ -630,7 +630,11 @@ async def start_command(client: Client, message: Message):
     repo69 = InlineKeyboardButton("ʀᴇᴘᴏ 🌐", url="https://github.com/Hrishi2861/Terabox-Downloader-Bot")
     user_mention = message.from_user.mention
     reply_markup = InlineKeyboardMarkup([[join_button, developer_button], [repo69]])
-    final_msg = t(message.from_user.id, "welcome", mention=user_mention)
+    final_msg = (
+        t(message.from_user.id, "welcome", mention=user_mention)
+        + "\n\n"
+        + t(message.from_user.id, "welcome_settings")
+    )
     video_file_id = "/app/Jet-Mirror.mp4"
     if os.path.exists(video_file_id):
         await client.send_video(
@@ -843,12 +847,12 @@ async def user_settings_callback(client: Client, callback_query):
     if action == "confirm":
         code = session.get("selected") or "en"
         set_user_lang(uid, code)
-        settings_sessions.pop(token, None)
         await callback_query.answer()
         language_name = dict(LANGUAGES).get(code, code)
         try:
             await callback_query.message.edit_text(
                 t(uid, "language_saved", language=language_name),
+                reply_markup=build_settings_back_keyboard(token),
                 parse_mode=None
             )
         except Exception as e:
@@ -905,6 +909,7 @@ async def user_settings_callback(client: Client, callback_query):
         try:
             await callback_query.message.edit_text(
                 t(uid, "thumb_removed"),
+                reply_markup=build_settings_back_keyboard(token),
                 parse_mode=None
             )
         except Exception as e:
@@ -946,6 +951,7 @@ async def user_settings_callback(client: Client, callback_query):
         try:
             await callback_query.message.edit_text(
                 t(uid, "dest_removed"),
+                reply_markup=build_settings_back_keyboard(token),
                 parse_mode=None
             )
         except Exception as e:
