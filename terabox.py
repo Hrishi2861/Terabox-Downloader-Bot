@@ -1132,7 +1132,8 @@ async def handle_pending_input(client, message, pending):
         set_user_setting(uid, leech_destination=dest_id,
                          leech_destination_title=dest_title)
         pending_inputs.pop(uid, None)
-        await message.reply_text(t(uid, "dest_set_done", title=dest_title))
+        confirm = await message.reply_text(t(uid, "dest_set_done", title=dest_title))
+        asyncio.create_task(delayed_delete(confirm, 600))
         if session:
             session["last_activity"] = time.time()
             try:
@@ -1806,10 +1807,11 @@ async def handle_message(client: Client, message: Message):
                 dest_title = dest_chat.title or dest_title
             except Exception as e:
                 logger.warning(f"Could not load destination chat title: {e}")
-            await client.send_message(
+            delivered = await client.send_message(
                 message.chat.id,
                 t(user_id, "dest_delivered", title=dest_title)
             )
+            asyncio.create_task(delayed_delete(delivered, 600))
             if dest_copy_failed:
                 await client.send_message(
                     message.chat.id,
