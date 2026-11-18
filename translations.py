@@ -1069,6 +1069,308 @@ START_BUTTON_TRANSLATIONS = {
 for _code, _buttons in START_BUTTON_TRANSLATIONS.items():
     TRANSLATIONS[_code].update(_buttons)
 
+# Additional languages: Italian, Japanese, Korean, Chinese.
+ADDITIONAL_LANGUAGES = [
+    ("it", "Italiano"),
+    ("ja", "日本語"),
+    ("ko", "한국어"),
+    ("zh", "中文"),
+]
+
+TRANSLATIONS["it"] = {
+    "welcome": "🌟 {mention}, sono un bot downloader per Terabox. Inviami un qualsiasi link Terabox, lo scaricherò in pochi secondi e te lo invierò ✨.",
+    "must_join": "Devi unirti al mio canale per usarmi.",
+    "cooldown": "L'API è in sviluppo. Per ridurre gli abusi devi attendere {remaining}s.",
+    "invalid_link": "Inserisci un link Terabox valido.",
+    "sending_media": "Ti sto inviando il file...🤤",
+    "download_failed": (
+        "Download non riuscito ❌\n\n"
+        "Motivo: il link potrebbe essere non valido o è un link a una cartella.\n"
+        "Sono supportati solo i link ai file."
+    ),
+    "file_deleted_warning": "⚠️ Questo file verrà eliminato automaticamente tra 10 minuti. Inoltralo per salvarlo.",
+    "no_videos": "Nessun video indicizzato. Il proprietario può usare /refresh per creare l'indice.",
+    "mongo_missing": "MongoDB non è configurato.",
+    "search_usage": "Uso: /search <da 1 a 3 parole chiave>",
+    "search_no_results": "Nessun file trovato che corrisponda a tutte le parole chiave fornite.",
+    "search_unavailable": "La ricerca non è disponibile al momento. Riprova.",
+    "search_expired": "Questa ricerca è scaduta. Invia di nuovo /search.",
+    "search_not_yours": "Questa ricerca appartiene a un altro utente.",
+    "search_none_left": "Non ci sono più file corrispondenti disponibili.",
+    "search_send_failed": "Impossibile inviare questo file. Potrebbe essere stato rimosso dal canale di origine.",
+    "search_header": "🔎 Ricerca: {keywords}\nTrovati {count} file corrispondenti. Seleziona un nome file qui sotto.",
+    "search_sending": "Invio del file...",
+    "search_file_unavailable": "Questo file non è più disponibile.",
+    "dump_caption": (
+        "💾 Accesso permanente al canale dump\n\n"
+        "Acquista l'accesso permanente all'intero canale dump.\n\n"
+        "• Binance: solo 1,5 USDT\n"
+        "• UPI: solo ₹200\n\n"
+        "Scegli il metodo di pagamento qui sotto. Dopo il pagamento, invia lo "
+        "screenshot a @rtx5069 per la verifica."
+    ),
+    "dump_qr_binance": (
+        "Pagamento Binance\n\n"
+        "Importo: solo 1,5 USDT\n\n"
+        "Scansiona questo QR con l'app Binance. Dopo il pagamento, invia lo "
+        "screenshot a @rtx5069 per la verifica."
+    ),
+    "dump_qr_upi": (
+        "Pagamento UPI\n\n"
+        "Importo: solo ₹200\n\n"
+        "Scansiona questo QR con qualsiasi app UPI. Dopo il pagamento, invia "
+        "lo screenshot a @rtx5069 per la verifica."
+    ),
+    "dump_qr_error": "Impossibile mostrare il QR di pagamento. Invia /dump e riprova.",
+    "dump_unavailable": "Le informazioni di accesso al dump non sono disponibili al momento.",
+    "dump_menu_unavailable": "Il menu di pagamento non è disponibile al momento.",
+    "select_language": "🌐 Scegli la tua lingua:",
+    "language_saved": "✅ Lingua impostata: {language}",
+    "confirm": "✅ Conferma",
+    "settings_title": "⚙️ Impostazioni utente",
+    "settings_status": "⚙️ Impostazioni utente\n\nLingua: {language}\nMiniatura: {thumb}\nDestinazione: {dest}",
+    "dest_default": "Predefinita (questa chat)",
+    "thumb_set_prompt": "🖼️ Inviami ora una foto per impostarla come miniatura personalizzata.",
+    "thumb_invalid": "❌ Impossibile elaborare quell'immagine. Invia un'altra foto.",
+    "thumb_set_done": "✅ Miniatura personalizzata impostata.",
+    "thumb_removed": "✅ Miniatura personalizzata rimossa.",
+    "dest_set_prompt": "📥 Inviami ora l'ID del tuo canale/gruppo (es. -1001234567890).",
+    "dest_set_done": "✅ Destinazione impostata: {title}",
+    "dest_removed": "✅ Destinazione rimossa. I video verranno inviati a questa chat.",
+    "dest_invalid": "❌ ID canale/gruppo non valido. Deve essere simile a -1001234567890. Invia /user_settings per riprovare.",
+    "dest_no_access": "❌ Devo prima essere amministratore in quella chat. Aggiungimi come admin e riprova.",
+    "dest_not_admin": "❌ Devi essere amministratore di quella chat per impostarla come destinazione.",
+    "dest_send_failed": "⚠️ Impossibile inviare alla tua destinazione, quindi l'ho inviato qui.",
+    "dest_delivered": "✅ Video consegnato alla tua destinazione: {title}",
+    "cancel_pending": "❌ Impostazione in sospeso annullata.",
+    "welcome_settings": "🌐 Invia /user_settings quando vuoi per cambiare lingua e altro.",
+    "btn_join": "Unisciti ❤️🚀",
+    "btn_developer": "Sviluppatore ⚡️",
+    "btn_repo": "Repo 🌐",
+}
+
+TRANSLATIONS["ja"] = {
+    "welcome": "🌟 {mention}、私は Terabox ダウンローダーボットです。Terabox のリンクを送ってください。数秒でダウンロードしてお送りします ✨。",
+    "must_join": "私を使うにはチャンネルに参加してください。",
+    "cooldown": "API は開発中です。悪用を防ぐため {remaining} 秒お待ちください。",
+    "invalid_link": "有効な Terabox リンクを送ってください。",
+    "sending_media": "メディアを送信しています...🤤",
+    "download_failed": (
+        "ダウンロードに失敗しました ❌\n\n"
+        "理由: リンクが壊れているか、フォルダリンクの可能性があります。\n"
+        "ファイルリンクのみ対応しています。"
+    ),
+    "file_deleted_warning": "⚠️ このファイルは10分後に自動削除されます。保存するには転送してください。",
+    "no_videos": "まだ動画がインデックスされていません。オーナーは /refresh でインデックスを作成できます。",
+    "mongo_missing": "MongoDB が設定されていません。",
+    "search_usage": "使い方: /search <1〜3個のキーワード>",
+    "search_no_results": "指定したすべてのキーワードに一致するファイルが見つかりませんでした。",
+    "search_unavailable": "検索は一時的に利用できません。もう一度お試しください。",
+    "search_expired": "この検索は期限切れです。/search をもう一度送信してください。",
+    "search_not_yours": "この検索は別のユーザーのものです。",
+    "search_none_left": "一致するファイルはもうありません。",
+    "search_send_failed": "このファイルを送信できませんでした。ソースチャンネルから削除された可能性があります。",
+    "search_header": "🔎 検索: {keywords}\n{count} 件の一致するファイルが見つかりました。下からファイル名を選択してください。",
+    "search_sending": "ファイルを送信しています...",
+    "search_file_unavailable": "このファイルはもう利用できません。",
+    "dump_caption": (
+        "💾 ダンプチャンネルへの永久アクセス\n\n"
+        "ダンプチャンネル全体への永久アクセスを購入できます。\n\n"
+        "• Binance: 1.5 USDT のみ\n"
+        "• UPI: ₹200 のみ\n\n"
+        "下から支払い方法を選択してください。支払い後、確認のためスクリーン"
+        "ショットを @rtx5069 までお送りください。"
+    ),
+    "dump_qr_binance": (
+        "Binance 支払い\n\n"
+        "金額: 1.5 USDT のみ\n\n"
+        "Binance アプリでこの QR をスキャンしてください。支払い後、確認の"
+        "ためスクリーンショットを @rtx5069 までお送りください。"
+    ),
+    "dump_qr_upi": (
+        "UPI 支払い\n\n"
+        "金額: ₹200 のみ\n\n"
+        "任意の UPI アプリでこの QR をスキャンしてください。支払い後、確認"
+        "のためスクリーンショットを @rtx5069 までお送りください。"
+    ),
+    "dump_qr_error": "支払い QR を表示できませんでした。/dump を送信して再試行してください。",
+    "dump_unavailable": "ダンプアクセス情報は一時的に利用できません。",
+    "dump_menu_unavailable": "支払いメニューは一時的に利用できません。",
+    "select_language": "🌐 言語を選択してください:",
+    "language_saved": "✅ 言語を設定しました: {language}",
+    "confirm": "✅ 確認",
+    "settings_title": "⚙️ ユーザー設定",
+    "settings_status": "⚙️ ユーザー設定\n\n言語: {language}\nサムネイル: {thumb}\n宛先: {dest}",
+    "dest_default": "デフォルト (このチャット)",
+    "thumb_set_prompt": "🖼️ カスタムサムネイルとして設定する写真を今すぐ送ってください。",
+    "thumb_invalid": "❌ その画像を処理できませんでした。別の写真を送ってください。",
+    "thumb_set_done": "✅ カスタムサムネイルを設定しました。",
+    "thumb_removed": "✅ カスタムサムネイルを削除しました。",
+    "dest_set_prompt": "📥 チャンネル/グループ ID を送ってください (例: -1001234567890)。",
+    "dest_set_done": "✅ 保存先を設定しました: {title}",
+    "dest_removed": "✅ 保存先を削除しました。動画はこのチャットに送信されます。",
+    "dest_invalid": "❌ 無効なチャンネル/グループ ID です。-1001234567890 のような形式で送ってください。再試行するには /user_settings を送信してください。",
+    "dest_no_access": "❌ まずそのチャットで管理者になる必要があります。管理者として追加してから再試行してください。",
+    "dest_not_admin": "❌ 保存先として設定するには、そのチャットの管理者である必要があります。",
+    "dest_send_failed": "⚠️ 保存先に送信できなかったため、ここに送信しました。",
+    "dest_delivered": "✅ 動画を保存先に配信しました: {title}",
+    "cancel_pending": "❌ 保留中の設定をキャンセルしました。",
+    "welcome_settings": "🌐 言語などを変更するには、いつでも /user_settings を送信してください。",
+    "btn_join": "参加 ❤️🚀",
+    "btn_developer": "開発者 ⚡️",
+    "btn_repo": "リポジトリ 🌐",
+}
+
+TRANSLATIONS["ko"] = {
+    "welcome": "🌟 {mention}, 저는 Terabox 다운로더 봇입니다. 아무 Terabox 링크나 보내주세요. 몇 초 안에 다운로드해서 보내드리겠습니다 ✨.",
+    "must_join": "저를 사용하려면 채널에 가입해야 합니다.",
+    "cooldown": "API가 개발 중입니다. 남용을 줄이기 위해 {remaining}초 기다려야 합니다.",
+    "invalid_link": "유효한 Terabox 링크를 보내주세요.",
+    "sending_media": "미디어를 보내는 중...🤤",
+    "download_failed": (
+        "다운로드 실패 ❌\n\n"
+        "이유: 링크가 손상되었거나 폴더 링크일 수 있습니다.\n"
+        "파일 링크만 지원됩니다."
+    ),
+    "file_deleted_warning": "⚠️ 이 파일은 10분 후 자동으로 삭제됩니다. 저장하려면 전달하세요.",
+    "no_videos": "아직 인덱싱된 동영상이 없습니다. 소유자는 /refresh로 인덱스를 만들 수 있습니다.",
+    "mongo_missing": "MongoDB가 구성되지 않았습니다.",
+    "search_usage": "사용법: /search <1~3개의 키워드>",
+    "search_no_results": "제공한 모든 키워드와 일치하는 파일이 없습니다.",
+    "search_unavailable": "검색을 일시적으로 사용할 수 없습니다. 다시 시도해 주세요.",
+    "search_expired": "이 검색이 만료되었습니다. /search를 다시 보내세요.",
+    "search_not_yours": "이 검색은 다른 사용자의 것입니다.",
+    "search_none_left": "더 이상 일치하는 파일이 없습니다.",
+    "search_send_failed": "이 파일을 보내지 못했습니다. 원본 채널에서 삭제되었을 수 있습니다.",
+    "search_header": "🔎 검색: {keywords}\n{count}개의 일치하는 파일을 찾았습니다. 아래에서 파일명을 선택하세요.",
+    "search_sending": "파일을 보내는 중...",
+    "search_file_unavailable": "이 파일은 더 이상 사용할 수 없습니다.",
+    "dump_caption": (
+        "💾 덤프 채널 영구 이용권\n\n"
+        "덤프 채널 전체에 대한 영구 이용권을 구매하세요.\n\n"
+        "• Binance: 1.5 USDT만\n"
+        "• UPI: ₹200만\n\n"
+        "아래에서 결제 방법을 선택하세요. 결제 후 확인을 위해 스크린샷을 "
+        "@rtx5069로 보내주세요."
+    ),
+    "dump_qr_binance": (
+        "Binance 결제\n\n"
+        "금액: 1.5 USDT만\n\n"
+        "Binance 앱으로 이 QR을 스캔하세요. 결제 후 확인을 위해 스크린샷을 "
+        "@rtx5069로 보내주세요."
+    ),
+    "dump_qr_upi": (
+        "UPI 결제\n\n"
+        "금액: ₹200만\n\n"
+        "아무 UPI 앱으로 이 QR을 스캔하세요. 결제 후 확인을 위해 스크린샷을 "
+        "@rtx5069로 보내주세요."
+    ),
+    "dump_qr_error": "결제 QR을 표시할 수 없습니다. /dump를 보내고 다시 시도하세요.",
+    "dump_unavailable": "덤프 이용 정보를 일시적으로 사용할 수 없습니다.",
+    "dump_menu_unavailable": "결제 메뉴를 일시적으로 사용할 수 없습니다.",
+    "select_language": "🌐 언어를 선택하세요:",
+    "language_saved": "✅ 언어가 설정되었습니다: {language}",
+    "confirm": "✅ 확인",
+    "settings_title": "⚙️ 사용자 설정",
+    "settings_status": "⚙️ 사용자 설정\n\n언어: {language}\n썸네일: {thumb}\n대상: {dest}",
+    "dest_default": "기본 (이 채팅)",
+    "thumb_set_prompt": "🖼️ 사용자 지정 썸네일로 설정할 사진을 지금 보내주세요.",
+    "thumb_invalid": "❌ 해당 이미지를 처리할 수 없습니다. 다른 사진을 보내주세요.",
+    "thumb_set_done": "✅ 사용자 지정 썸네일이 설정되었습니다.",
+    "thumb_removed": "✅ 사용자 지정 썸네일이 제거되었습니다.",
+    "dest_set_prompt": "📥 채널/그룹 ID를 보내주세요 (예: -1001234567890).",
+    "dest_set_done": "✅ 대상이 설정되었습니다: {title}",
+    "dest_removed": "✅ 대상이 제거되었습니다. 동영상은 이 채팅으로 전송됩니다.",
+    "dest_invalid": "❌ 잘못된 채널/그룹 ID입니다. -1001234567890 형식이어야 합니다. 다시 시도하려면 /user_settings를 보내세요.",
+    "dest_no_access": "❌ 먼저 해당 채팅에서 관리자여야 합니다. 관리자로 추가한 후 다시 시도하세요.",
+    "dest_not_admin": "❌ 대상을 설정하려면 해당 채팅의 관리자여야 합니다.",
+    "dest_send_failed": "⚠️ 대상으로 보내지 못해 여기로 보냈습니다.",
+    "dest_delivered": "✅ 동영상이 대상으로 전달되었습니다: {title}",
+    "cancel_pending": "❌ 대기 중인 설정이 취소되었습니다.",
+    "welcome_settings": "🌐 언어 등을 변경하려면 언제든지 /user_settings를 보내세요.",
+    "btn_join": "참여 ❤️🚀",
+    "btn_developer": "개발자 ⚡️",
+    "btn_repo": "저장소 🌐",
+}
+
+TRANSLATIONS["zh"] = {
+    "welcome": "🌟 {mention}，我是一个 Terabox 下载机器人。把任意 Terabox 链接发给我，我会在几秒内下载并发送给你 ✨。",
+    "must_join": "你必须加入我的频道才能使用我。",
+    "cooldown": "API 仍在开发中。为减少滥用，请等待 {remaining} 秒。",
+    "invalid_link": "请提供有效的 Terabox 链接。",
+    "sending_media": "正在发送媒体...🤤",
+    "download_failed": (
+        "下载失败 ❌\n\n"
+        "原因：链接可能已失效，或者是文件夹链接。\n"
+        "仅支持文件链接。"
+    ),
+    "file_deleted_warning": "⚠️ 此文件将在 10 分钟后自动删除。请转发以保存。",
+    "no_videos": "尚未收录视频。所有者可以使用 /refresh 建立索引。",
+    "mongo_missing": "未配置 MongoDB。",
+    "search_usage": "用法：/search <1 到 3 个关键词>",
+    "search_no_results": "未找到匹配所有关键词的文件。",
+    "search_unavailable": "搜索暂时不可用，请重试。",
+    "search_expired": "此搜索已过期。请重新发送 /search。",
+    "search_not_yours": "此搜索属于其他用户。",
+    "search_none_left": "没有更多匹配的文件了。",
+    "search_send_failed": "发送此文件失败，可能已被从源频道移除。",
+    "search_header": "🔎 搜索：{keywords}\n找到 {count} 个匹配文件。请在下方选择文件名。",
+    "search_sending": "正在发送文件...",
+    "search_file_unavailable": "此文件已不可用。",
+    "dump_caption": (
+        "💾 永久转储频道访问权限\n\n"
+        "购买整个转储频道的永久访问权限。\n\n"
+        "• Binance：仅 1.5 USDT\n"
+        "• UPI：仅 ₹200\n\n"
+        "请在下方选择支付方式。支付后，请将付款截图发送至 @rtx5069 "
+        "进行验证。"
+    ),
+    "dump_qr_binance": (
+        "Binance 付款\n\n"
+        "金额：仅 1.5 USDT\n\n"
+        "使用 Binance 应用扫描此二维码。支付后，请将截图发送至 "
+        "@rtx5069 进行验证。"
+    ),
+    "dump_qr_upi": (
+        "UPI 付款\n\n"
+        "金额：仅 ₹200\n\n"
+        "使用任意 UPI 应用扫描此二维码。支付后，请将截图发送至 "
+        "@rtx5069 进行验证。"
+    ),
+    "dump_qr_error": "无法显示付款二维码。请发送 /dump 后重试。",
+    "dump_unavailable": "转储访问信息暂时不可用。",
+    "dump_menu_unavailable": "付款菜单暂时不可用。",
+    "select_language": "🌐 选择你的语言：",
+    "language_saved": "✅ 语言已设置：{language}",
+    "confirm": "✅ 确认",
+    "settings_title": "⚙️ 用户设置",
+    "settings_status": "⚙️ 用户设置\n\n语言：{language}\n缩略图：{thumb}\n目标：{dest}",
+    "dest_default": "默认（当前聊天）",
+    "thumb_set_prompt": "🖼️ 现在发送一张照片，将其设置为自定义缩略图。",
+    "thumb_invalid": "❌ 无法处理该图片。请发送另一张照片。",
+    "thumb_set_done": "✅ 自定义缩略图已设置。",
+    "thumb_removed": "✅ 自定义缩略图已移除。",
+    "dest_set_prompt": "📥 现在发送你的频道/群组 ID（例如 -1001234567890）。",
+    "dest_set_done": "✅ 目标已设置：{title}",
+    "dest_removed": "✅ 目标已移除。视频将发送到此聊天。",
+    "dest_invalid": "❌ 无效的频道/群组 ID。格式应类似 -1001234567890。请发送 /user_settings 重试。",
+    "dest_no_access": "❌ 我需要先成为该聊天的管理员。请将我添加为管理员后重试。",
+    "dest_not_admin": "❌ 你必须该聊天的管理员才能将其设为目标。",
+    "dest_send_failed": "⚠️ 无法发送到你的目标，因此已发送到此处。",
+    "dest_delivered": "✅ 视频已发送到你的目标：{title}",
+    "cancel_pending": "❌ 已取消待处理的设置。",
+    "welcome_settings": "🌐 随时发送 /user_settings 更改语言等设置。",
+    "btn_join": "加入 ❤️🚀",
+    "btn_developer": "开发者 ⚡️",
+    "btn_repo": "仓库 🌐",
+}
+
+for _code, _name in ADDITIONAL_LANGUAGES:
+    assert _code in TRANSLATIONS, f"missing translations for {_code}"
+
+LANGUAGES.extend(ADDITIONAL_LANGUAGES)
+LANGUAGE_CODES = {code for code, _name in LANGUAGES}
+
 
 
 
