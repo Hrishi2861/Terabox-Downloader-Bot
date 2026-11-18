@@ -937,30 +937,106 @@ async def user_settings_callback(client: Client, callback_query):
 
 DEST_ID_PATTERN = re.compile(r'^-100\d{6,}$')
 
+ADMIN_STATUSES = (
+    ChatMemberStatus.OWNER,
+    ChatMemberStatus.ADMINISTRATOR,
+)
+
+MEMBER_STATUSES = (
+    ChatMemberStatus.OWNER,
+    ChatMemberStatus.ADMINISTRATOR,
+    ChatMemberStatus.MEMBER,
+)
+
 def is_destination_admin(member):
-    return getattr(member, "status", None) in ("administrator", "owner", "creator")
+    status = getattr(member, "status", None)
+    if status in ADMIN_STATUSES:
+        return True
+    # Fallback for builds where the enum values differ by string.
+    return str(getattr(status, "value", status)).lower() in ("admin", "administrator", "owner", "creator")
+
+def is_destination_member(member):
+    status = getattr(member, "status", None)
+    if status in MEMBER_STATUSES:
+        return True
+    return str(getattr(status, "value", status)).lower() in ("member", "admin", "administrator", "owner", "creator")
+
+async def can_bot_post_to_chat(client, dest_id):
+    try:
+        test = await client.send_message(dest_id, "✅ Destination check")
+        try:
+            await test.delete()
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        logger.error(
+            f"Destination {dest_id}: post test failed: "
+            f"{type(e).__name__}: {e}"
+        )
+        return False
 
 async def validate_leech_destination(client, uid, raw_text):
     text = raw_text.strip()
     if not DEST_ID_PATTERN.match(text):
         return None, t(uid, "dest_invalid")
     dest_id = int(text)
+
+    bot_id = client.me.id if getattr(client, "me", None) else None
+    if bot_id is None:
+        try:
+            bot_id = (await client.get_me()).id
+        except Exception:
+            bot_id = "me"
+
     try:
-        bot_member = await client.get_chat_member(dest_id, "me")
-    except Exception:
+        chat = await client.get_chat(dest_id)
+    except Exception as e:
+        logger.error(
+            f"Destination {dest_id}: bot cannot access chat "
+            f"(bot id {bot_id}): {type(e).__name__}: {e}"
+        )
         return None, t(uid, "dest_no_access")
-    if not is_destination_admin(bot_member):
+
+    bot_can_post = False
+    try:
+        bot_member = await client.get_chat_member(dest_id, bot_id)
+        if is_destination_admin(bot_member):
+            bot_can_post = True
+        elif is_destination_member(bot_member):
+            bot_can_post = await can_bot_post_to_chat(client, dest_id)
+        logger.info(
+            f"Destination {dest_id}: bot status "
+            f"{getattr(bot_member, 'status', None)} → can post: {bot_can_post}"
+        )
+    except Exception as e:
+        logger.error(
+            f"Destination {dest_id}: bot membership check failed "
+            f"(bot id {bot_id}): {type(e).__name__}: {e}"
+        )
+        bot_can_post = await can_bot_post_to_chat(client, dest_id)
+
+    if not bot_can_post:
         return None, t(uid, "dest_no_access")
+
     try:
         user_member = await client.get_chat_member(dest_id, uid)
-    except Exception:
+    except Exception as e:
+        logger.error(
+            f"Destination {dest_id}: user membership check failed "
+            f"(user id {uid}): {type(e).__name__}: {e}"
+        )
         return None, t(uid, "dest_not_admin")
-    if not is_destination_admin(user_member):
+
+    user_is_admin = is_destination_admin(user_member)
+    logger.info(
+        f"Destination {dest_id}: user {uid} status "
+        f"{getattr(user_member, 'status', None)} → admin: {user_is_admin}"
+    )
+    if not user_is_admin:
         return None, t(uid, "dest_not_admin")
-    try:
-        return await client.get_chat(dest_id), None
-    except Exception:
-        return dest_id, None
+
+    return chat, None
 
 async def handle_pending_input(client, message, pending):
     uid = message.from_user.id
