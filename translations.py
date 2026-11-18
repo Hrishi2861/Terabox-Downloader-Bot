@@ -1048,6 +1048,27 @@ WELCOME_SETTINGS_HINTS = {
 for _code, _hint in WELCOME_SETTINGS_HINTS.items():
     TRANSLATIONS[_code]["welcome_settings"] = _hint
 
+# Buttons in the /start welcome message.
+START_BUTTON_TRANSLATIONS = {
+    "en": {"btn_join": "Join ❤️🚀", "btn_developer": "Developer ⚡️", "btn_repo": "Repo 🌐"},
+    "hi": {"btn_join": "जुड़ें ❤️🚀", "btn_developer": "डेवलपर ⚡️", "btn_repo": "रेपो 🌐"},
+    "mr": {"btn_join": "सामील व्हा ❤️🚀", "btn_developer": "डेव्हलपर ⚡️", "btn_repo": "रेपो 🌐"},
+    "bn": {"btn_join": "যোগ দিন ❤️🚀", "btn_developer": "ডেভেলপার ⚡️", "btn_repo": "রেপো 🌐"},
+    "ta": {"btn_join": "சேரவும் ❤️🚀", "btn_developer": "டெவலப்பர் ⚡️", "btn_repo": "ரெப்போ 🌐"},
+    "te": {"btn_join": "చేరండి ❤️🚀", "btn_developer": "డెవలపర్ ⚡️", "btn_repo": "రెపో 🌐"},
+    "kn": {"btn_join": "ಸೇರಿ ❤️🚀", "btn_developer": "ಡೆವಲಪರ್ ⚡️", "btn_repo": "ರೆಪೊ 🌐"},
+    "ml": {"btn_join": "ചേരുക ❤️🚀", "btn_developer": "ഡെവലപ്പർ ⚡️", "btn_repo": "റെപ്പോ 🌐"},
+    "ur": {"btn_join": "شامل ہوں ❤️🚀", "btn_developer": "ڈویلپر ⚡️", "btn_repo": "ریپو 🌐"},
+    "pa": {"btn_join": "ਸ਼ਾਮਲ ਹੋਵੋ ❤️🚀", "btn_developer": "ਡਿਵੈਲਪਰ ⚡️", "btn_repo": "ਰੈਪੋ 🌐"},
+    "gu": {"btn_join": "જોડાઓ ❤️🚀", "btn_developer": "ડેવલપર ⚡️", "btn_repo": "રેપો 🌐"},
+    "es": {"btn_join": "Unirse ❤️🚀", "btn_developer": "Desarrollador ⚡️", "btn_repo": "Repo 🌐"},
+    "fr": {"btn_join": "Rejoindre ❤️🚀", "btn_developer": "Développeur ⚡️", "btn_repo": "Dépôt 🌐"},
+    "de": {"btn_join": "Beitreten ❤️🚀", "btn_developer": "Entwickler ⚡️", "btn_repo": "Repo 🌐"},
+}
+
+for _code, _buttons in START_BUTTON_TRANSLATIONS.items():
+    TRANSLATIONS[_code].update(_buttons)
+
 
 
 

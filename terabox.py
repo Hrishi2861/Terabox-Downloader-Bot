@@ -625,15 +625,23 @@ async def periodic_reindex():
 
 @app.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
-    join_button = InlineKeyboardButton("ᴊᴏɪɴ ❤️🚀", url="https://t.me/jetmirror")
-    developer_button = InlineKeyboardButton("ᴅᴇᴠᴇʟᴏᴘᴇʀ ⚡️", url="https://t.me/rtx5069")
-    repo69 = InlineKeyboardButton("ʀᴇᴘᴏ 🌐", url="https://github.com/Hrishi2861/Terabox-Downloader-Bot")
+    uid = message.from_user.id
+    join_button = InlineKeyboardButton(
+        t(uid, "btn_join"), url="https://t.me/jetmirror"
+    )
+    developer_button = InlineKeyboardButton(
+        t(uid, "btn_developer"), url="https://t.me/rtx5069"
+    )
+    repo69 = InlineKeyboardButton(
+        t(uid, "btn_repo"),
+        url="https://github.com/Hrishi2861/Terabox-Downloader-Bot"
+    )
     user_mention = message.from_user.mention
     reply_markup = InlineKeyboardMarkup([[join_button, developer_button], [repo69]])
     final_msg = (
-        t(message.from_user.id, "welcome", mention=user_mention)
+        t(uid, "welcome", mention=user_mention)
         + "\n\n"
-        + t(message.from_user.id, "welcome_settings")
+        + t(uid, "welcome_settings")
     )
     video_file_id = "/app/Jet-Mirror.mp4"
     if os.path.exists(video_file_id):
