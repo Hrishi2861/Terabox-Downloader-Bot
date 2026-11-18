@@ -383,7 +383,7 @@ async def build_settings_status(client, uid):
 
 def build_settings_menu_keyboard(token):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Language/भाषा", callback_data=f"us:open:{token}")],
+        [InlineKeyboardButton("🌐 Language/भाषा", callback_data=f"us:open:{token}")],
         [InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"us:thumb:{token}")],
         [InlineKeyboardButton("📥 Leech Destination", callback_data=f"us:dest:{token}")],
         [InlineKeyboardButton("❌ Close", callback_data=f"us:close:{token}")],
@@ -761,10 +761,6 @@ async def user_settings_cmd(client: Client, message: Message):
     )
     settings_sessions[token]["message"] = settings_message
     asyncio.create_task(expire_settings_session(token))
-    try:
-        await message.delete()
-    except Exception as e:
-        logger.warning(f"Could not delete user_settings command message: {e}")
 
 @app.on_callback_query(filters.regex(r"^us:"))
 async def user_settings_callback(client: Client, callback_query):
