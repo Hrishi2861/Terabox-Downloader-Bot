@@ -34,10 +34,14 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - Folder links are detected automatically. Every Terabox link is preflighted
   against the download API's `/api` endpoint: single-file links stream from
   `/download` exactly as before, while folder links are expanded and all
-  downloadable files are sent. In *Single files* mode videos use the normal
-  video pipeline and other files are sent as documents; in *Zipped* mode a
-  `.zip` is built and split into `.z01`, `.z02`, … parts when it exceeds the
-  upload limit.
+  downloadable files are sent. Folder files are queued in aria2 together
+  (up to 8 concurrent downloads) instead of one at a time, and in *Single
+  files* mode each file is sent as soon as its own download finishes. Videos
+  use the normal video pipeline, images are sent as photos (up to Telegram's
+  10 MB photo limit; larger images are sent as documents), and everything
+  else is sent as a document. In *Zipped* mode the same parallel downloads
+  are archived into a `.zip`, split into `.z01`, `.z02`, … parts when it
+  exceeds the upload limit.
 - Pending setting inputs expire after 5 minutes and can be aborted with
   `/cancel`.
 

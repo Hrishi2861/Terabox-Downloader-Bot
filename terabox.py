@@ -52,6 +52,7 @@ options = {
     "allow-overwrite": "true",
     "min-split-size": "4M",
     "split": "10",
+    "max-concurrent-downloads": "8",
     "connect-timeout": "30",
     "timeout": "120"
 }
@@ -1591,10 +1592,16 @@ VIDEO_EXTENSIONS = {
     ".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".m4v",
     ".flv", ".wmv", ".mpg", ".mpeg", ".3gp", ".vob", ".m2ts", ".mts",
 }
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+PHOTO_MAX_SIZE = 10 * 1024 * 1024
 
 
 def is_video_file(path):
     return os.path.splitext(path)[1].lower() in VIDEO_EXTENSIONS
+
+
+def is_image_file(path):
+    return os.path.splitext(path)[1].lower() in IMAGE_EXTENSIONS
 
 
 def fetch_link_info(url):
@@ -1691,15 +1698,74 @@ async def fetch_custom_thumb(client, user_id):
         return None
 
 
-async def download_with_aria2(url, status_message, user_id, first_name,
-                              out_dir=None, out_name=None, label=None):
+def add_aria2_download(url, out_dir=None, out_name=None):
+    """Queue one download in aria2 and return its download object."""
     options = {}
     if out_dir:
         options["dir"] = os.path.abspath(out_dir)
     if out_name:
         options["out"] = out_name
+    return aria2.add_uris([url], options=options or None)
+
+
+async def wait_for_aria2(download, url="", poll_interval=5, stuck_timeout=120):
+    """Wait for a queued aria2 download without blocking other downloads."""
+    stuck_start = None
+    while True:
+        try:
+            download.update()
+        except Exception as e:
+            logger.error(f"aria2 status check failed for {url}: {e}")
+            return False
+        if download.is_complete:
+            return True
+
+        status = str(getattr(download, "status", "")).lower()
+        if status in ("error", "removed") or getattr(download, "has_failed", False):
+            logger.error(
+                f"aria2 reported failure for {url}: {getattr(download, 'error_message', '')}"
+            )
+            return False
+
+        # Only flag a stall while aria2 is actually transferring this item;
+        # queued (waiting) downloads legitimately report zero bytes.
+        if (
+            status == "active"
+            and download.progress == 0
+            and download.completed_length == 0
+        ):
+            if stuck_start is None:
+                stuck_start = time.time()
+            elif time.time() - stuck_start > stuck_timeout:
+                logger.info(f"Download stuck at 0% for over {stuck_timeout}s, cancelling: {url}")
+                try:
+                    aria2.remove([download])
+                except Exception:
+                    pass
+                return False
+        else:
+            stuck_start = None
+
+        await asyncio.sleep(poll_interval)
+
+
+def resolve_download_path(download, workdir):
+    if not getattr(download, "files", None):
+        return None
+    path = download.files[0].path
+    if not os.path.isabs(path):
+        path = os.path.abspath(path)
+    if not os.path.exists(path):
+        fallback = os.path.join(os.path.abspath(workdir), os.path.basename(path))
+        if os.path.exists(fallback):
+            path = fallback
+    return path if os.path.exists(path) else None
+
+
+async def download_with_aria2(url, status_message, user_id, first_name,
+                              out_dir=None, out_name=None, label=None):
     try:
-        download = aria2.add_uris([url], options=options or None)
+        download = add_aria2_download(url, out_dir=out_dir, out_name=out_name)
     except Exception as e:
         logger.error(f"aria2 could not add download: {e}")
         return None
@@ -1898,6 +1964,16 @@ async def upload_local_file(client, message, user_id, file_path, display_name,
             return await user.send_document(DUMP_CHAT_ID, path, **kwargs)
         return await client.send_document(DUMP_CHAT_ID, path, **kwargs)
 
+    async def send_photo_file(path, part_caption):
+        kwargs = dict(caption=part_caption, progress=upload_progress)
+        try:
+            if USER_SESSION_STRING:
+                return await user.send_photo(DUMP_CHAT_ID, path, **kwargs)
+            return await client.send_photo(DUMP_CHAT_ID, path, **kwargs)
+        except Exception as e:
+            logger.warning(f"Could not send {path} as photo, falling back to document: {e}")
+            return await send_document_file(path, part_caption)
+
     if is_video_file(file_path) and file_size > SPLIT_SIZE:
         await update_status.force(f"✂️ Splitting {display_name} ({format_size(file_size)})")
         split_files = await split_video_with_ffmpeg(
@@ -1929,6 +2005,12 @@ async def upload_local_file(client, message, user_id, file_path, display_name,
     elif is_video_file(file_path):
         await update_status.force(f"📤 Uploading {display_name}\nSize: {format_size(file_size)}")
         sent = await send_video_file(file_path, caption)
+        msg = await deliver(sent)
+        if msg:
+            user_msgs.append(msg)
+    elif is_image_file(file_path) and file_size <= PHOTO_MAX_SIZE:
+        await update_status.force(f"🖼️ Uploading {display_name}\nSize: {format_size(file_size)}")
+        sent = await send_photo_file(file_path, caption)
         msg = await deliver(sent)
         if msg:
             user_msgs.append(msg)
@@ -2081,52 +2163,112 @@ async def process_folder_single(client, message, user_id, info, status_message):
     if not files:
         await message.reply_text(t(user_id, "folder_empty"))
         return
+
     total = len(files)
-    thumb_path = await fetch_custom_thumb(client, user_id)
+    first_name = message.from_user.first_name or "User"
     stamp = int(time.time())
+    workdir = os.path.abspath(os.path.join("downloads", f"folder_{user_id}_{stamp}"))
+    os.makedirs(workdir, exist_ok=True)
+    thumb_path = await fetch_custom_thumb(client, user_id)
     sent = failed = 0
     user_msgs = []
     delivered = False
     dest_failed = False
+    used_paths = set()
+    tasks = []
+
+    async def wait_entry(entry):
+        ok = await wait_for_aria2(entry["download"], entry["rel"])
+        return ok, entry
+
     try:
+        # Queue every file at once so aria2 downloads them in parallel.
         for i, f in enumerate(files, 1):
-            rel = f.get("filename") or f"file_{i}"
+            rel = unique_relative_path(used_paths, f.get("filename"), i)
             rel_caption = rel if len(rel) <= 200 else rel[:197] + "..."
             base_name = safe_relative_parts(rel, fallback=f"file_{i}")[-1]
             out_name = truncate_filename(f"folder_{user_id}_{stamp}_{i:04d}_{base_name}")
-            await update_status_message(
-                status_message,
-                f"📥 Downloading {i}/{total}\n{escape(rel_caption)}",
-            )
             try:
-                result = await process_single_url(
-                    client, message, user_id,
+                download = add_aria2_download(
                     f"{DOWNLOAD_API}{f['download_link']}",
-                    status_message,
-                    display_name=rel_caption,
-                    caption_extra=f"📁 {i}/{total} • {rel_caption}",
-                    custom_thumb_path=thumb_path,
-                    own_thumb=False,
-                    notify=False,
+                    out_dir=workdir,
                     out_name=out_name,
                 )
             except Exception as e:
-                logger.exception(f"Folder file {i}/{total} failed: {e}")
+                logger.exception(f"Could not queue folder file {i}/{total}: {e}")
                 failed += 1
                 continue
-            if not result.get("ok"):
+            entry = {
+                "index": i,
+                "rel": rel,
+                "caption": rel_caption,
+                "download": download,
+            }
+            tasks.append(asyncio.create_task(wait_entry(entry)))
+
+        if not tasks:
+            await message.reply_text(t(user_id, "download_failed"))
+            return
+
+        await update_status_message(
+            status_message,
+            f"📥 Downloading {len(tasks)} files in parallel",
+        )
+
+        # Upload each file as soon as its own download finishes.
+        done = 0
+        for future in asyncio.as_completed(tasks):
+            try:
+                ok, entry = await future
+            except Exception as e:
+                logger.exception(f"Folder download task failed: {e}")
                 failed += 1
                 continue
+            done += 1
+            if not ok:
+                failed += 1
+                continue
+
+            path = resolve_download_path(entry["download"], workdir)
+            if not path:
+                logger.error(f"Downloaded file missing on disk: {entry['rel']}")
+                failed += 1
+                continue
+
+            caption = build_caption(
+                entry["caption"], user_id, first_name,
+                f"📁 {entry['index']}/{total} • {entry['caption']}",
+            )
+            try:
+                result = await upload_local_file(
+                    client, message, user_id, path, entry["caption"], caption,
+                    status_message, custom_thumb_path=thumb_path, notify=False,
+                )
+            except Exception as e:
+                logger.exception(f"Folder upload failed for {entry['rel']}: {e}")
+                failed += 1
+                continue
+
             sent += 1
             user_msgs.extend(result.get("user_msgs") or [])
             delivered = delivered or result.get("delivered_to_custom", False)
             dest_failed = dest_failed or result.get("dest_copy_failed", False)
+            await update_status_message(
+                status_message,
+                f"📥 Downloaded {done}/{len(tasks)} • 📤 Sent {sent}",
+            )
     finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         if thumb_path and os.path.exists(thumb_path):
             try:
                 os.remove(thumb_path)
             except Exception:
                 pass
+        shutil.rmtree(workdir, ignore_errors=True)
 
     await _finish_folder_notifications(
         client, message, user_id, user_msgs, delivered, dest_failed
@@ -2147,7 +2289,7 @@ async def process_folder_zip(client, message, user_id, info, status_message):
     total = len(files)
     first_name = message.from_user.first_name or "User"
     stamp = int(time.time())
-    workdir = os.path.join("downloads", f"folder_{user_id}_{stamp}")
+    workdir = os.path.abspath(os.path.join("downloads", f"folder_{user_id}_{stamp}"))
     os.makedirs(workdir, exist_ok=True)
 
     folder_name = info.get("filename") or "folder"
@@ -2163,52 +2305,77 @@ async def process_folder_zip(client, message, user_id, info, status_message):
     user_msgs = []
     delivered = False
     dest_failed = False
+    tasks = []
+
+    async def wait_entry(entry):
+        ok = await wait_for_aria2(entry["download"], entry["rel"])
+        return ok, entry
 
     try:
+        # Queue every file at once so aria2 downloads them in parallel.
         for i, f in enumerate(files, 1):
             rel = unique_relative_path(used_paths, f.get("filename"), i)
             rel = os.path.normpath(rel)
             rel_caption = rel if len(rel) <= 200 else rel[:197] + "..."
             flat_name = truncate_filename(f"{i:04d}_{os.path.basename(rel)}")
-            await update_status_message(
-                status_message,
-                f"📥 Downloading {i}/{total}\n{escape(rel_caption)}",
-            )
             try:
-                download = await download_with_aria2(
+                download = add_aria2_download(
                     f"{DOWNLOAD_API}{f['download_link']}",
-                    status_message, user_id, first_name,
-                    out_dir=workdir, out_name=flat_name, label=rel_caption,
+                    out_dir=workdir,
+                    out_name=flat_name,
                 )
             except Exception as e:
-                logger.exception(f"Folder download {i}/{total} failed: {e}")
+                logger.exception(f"Could not queue folder file {i}/{total}: {e}")
                 failed += 1
                 continue
-            if download is None:
+            entry = {"rel": rel, "download": download}
+            tasks.append(asyncio.create_task(wait_entry(entry)))
+
+        if not tasks:
+            await message.reply_text(t(user_id, "download_failed"))
+            return
+
+        await update_status_message(
+            status_message,
+            f"📥 Downloading {len(tasks)} files in parallel",
+        )
+
+        done = 0
+        for future in asyncio.as_completed(tasks):
+            try:
+                ok, entry = await future
+            except Exception as e:
+                logger.exception(f"Folder download task failed: {e}")
                 failed += 1
                 continue
-            src = download.files[0].path
-            if not os.path.isabs(src):
-                src = os.path.abspath(src)
-            if not os.path.exists(src):
-                fallback = os.path.join(os.path.abspath(workdir), os.path.basename(src))
-                if os.path.exists(fallback):
-                    src = fallback
-            target = os.path.join(workdir, rel)
+            done += 1
+            if not ok:
+                failed += 1
+                continue
+
+            src = resolve_download_path(entry["download"], workdir)
+            if not src:
+                logger.error(f"Downloaded file missing on disk: {entry['rel']}")
+                failed += 1
+                continue
+
+            target = os.path.join(workdir, entry["rel"])
             os.makedirs(os.path.dirname(target), exist_ok=True)
             try:
-                if not os.path.exists(src):
-                    raise FileNotFoundError(src)
                 try:
                     os.replace(src, target)
                 except Exception:
                     shutil.move(src, target)
             except Exception as e:
-                logger.exception(f"Could not store folder file {i}/{total}: {e}")
+                logger.exception(f"Could not store folder file {entry['rel']}: {e}")
                 failed += 1
                 continue
-            downloaded.append((target, rel))
+            downloaded.append((target, entry["rel"]))
             total_bytes += os.path.getsize(target)
+            await update_status_message(
+                status_message,
+                f"📥 Downloaded {done}/{len(tasks)}",
+            )
 
         if not downloaded:
             await message.reply_text(t(user_id, "folder_empty"))
@@ -2275,6 +2442,11 @@ async def process_folder_zip(client, message, user_id, info, status_message):
         )
         asyncio.create_task(delayed_delete(summary, 600))
     finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         shutil.rmtree(workdir, ignore_errors=True)
         for part in parts:
             try:
