@@ -36,7 +36,9 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
   `/download` exactly as before, while folder links are expanded and all
   downloadable files are sent. Folder files are queued in aria2 together
   (up to 8 concurrent downloads) instead of one at a time, and in *Single
-  files* mode each file is sent as soon as its own download finishes. Videos
+  files* mode each file is sent as soon as its own download finishes. Media
+  sends are spaced out and automatically retried on `FloodWait`, so large
+  folders are not cut short by Telegram rate limits. Videos
   use the normal video pipeline, images are sent as photos (up to Telegram's
   10 MB photo limit; larger images are sent as documents), and everything
   else is sent as a document. In *Zipped* mode the same parallel downloads
@@ -55,6 +57,7 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
 - `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot uses `/api` to detect files/folders and `/download?url=...` for single-file streams). `Str`
+- `TELEGRAM_MEDIA_DELAY`: Optional. Minimum seconds between Telegram media sends/copies, defaults to `1.0`. Folder uploads retry automatically on `FloodWait` instead of marking files as failed. `Float`
 
 ---
 ### For farther assistance visit my support group: [**@JetMirror**](https://t.me/jetmirrorchatz).

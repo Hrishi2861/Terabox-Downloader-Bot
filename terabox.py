@@ -144,6 +144,46 @@ user_index = None
 user_cooldowns = {}
 COOLDOWN_SECONDS = 90
 
+# Telegram can temporarily rate-limit rapid folder uploads. Keep media sends
+# sequential across jobs, leave a short gap between them, and retry the same
+# operation for the full duration requested by Telegram instead of counting
+# that file as failed.
+TELEGRAM_MEDIA_DELAY = float(os.environ.get("TELEGRAM_MEDIA_DELAY", "1.0"))
+telegram_media_lock = asyncio.Lock()
+telegram_last_media_send = 0.0
+
+
+async def telegram_call_with_flood_retry(operation, description, paced=False):
+    """Run a Telegram API operation, honoring every FloodWait before retrying."""
+    global telegram_last_media_send
+
+    async def run():
+        global telegram_last_media_send
+        if paced:
+            elapsed = time.monotonic() - telegram_last_media_send
+            delay = TELEGRAM_MEDIA_DELAY - elapsed
+            if delay > 0:
+                await asyncio.sleep(delay)
+
+        while True:
+            try:
+                result = await operation()
+                if paced:
+                    telegram_last_media_send = time.monotonic()
+                return result
+            except FloodWait as e:
+                wait_seconds = max(1, int(e.value)) + 1
+                logger.warning(
+                    f"Telegram FloodWait while {description}; "
+                    f"waiting {wait_seconds}s before retrying the same operation"
+                )
+                await asyncio.sleep(wait_seconds)
+
+    if paced:
+        async with telegram_media_lock:
+            return await run()
+    return await run()
+
 search_sessions = {}
 SEARCH_PAGE_SIZE = 5
 SEARCH_SESSION_TTL = 60
@@ -1938,38 +1978,74 @@ async def upload_local_file(client, message, user_id, file_path, display_name,
         nonlocal delivered_to_custom, dest_copy_failed
         if custom_dest:
             try:
-                msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
+                msg = await telegram_call_with_flood_retry(
+                    lambda: client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id),
+                    f"copying {display_name} to the custom destination",
+                    paced=True,
+                )
                 delivered_to_custom = True
                 return msg
             except Exception as e:
                 logger.error(f"Could not copy to custom destination {custom_dest}: {e}")
-                msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+                msg = await telegram_call_with_flood_retry(
+                    lambda: client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id),
+                    f"copying {display_name} to the user chat",
+                    paced=True,
+                )
                 dest_copy_failed = True
                 return msg
-        return await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+        return await telegram_call_with_flood_retry(
+            lambda: client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id),
+            f"copying {display_name} to the user chat",
+            paced=True,
+        )
 
     async def send_video_file(path, part_caption):
         duration, width, height = await get_video_metadata(path)
         thumb = custom_thumb_path or await generate_thumbnail(path, duration)
         kwargs = build_video_kwargs(part_caption, duration, width, height, thumb, upload_progress)
         if USER_SESSION_STRING:
-            return await user.send_video(DUMP_CHAT_ID, path, **kwargs)
-        return await client.send_video(DUMP_CHAT_ID, path, **kwargs)
+            return await telegram_call_with_flood_retry(
+                lambda: user.send_video(DUMP_CHAT_ID, path, **kwargs),
+                f"uploading video {display_name}",
+                paced=True,
+            )
+        return await telegram_call_with_flood_retry(
+            lambda: client.send_video(DUMP_CHAT_ID, path, **kwargs),
+            f"uploading video {display_name}",
+            paced=True,
+        )
 
     async def send_document_file(path, part_caption):
         kwargs = dict(caption=part_caption, progress=upload_progress)
         if custom_thumb_path:
             kwargs["thumb"] = custom_thumb_path
         if USER_SESSION_STRING:
-            return await user.send_document(DUMP_CHAT_ID, path, **kwargs)
-        return await client.send_document(DUMP_CHAT_ID, path, **kwargs)
+            return await telegram_call_with_flood_retry(
+                lambda: user.send_document(DUMP_CHAT_ID, path, **kwargs),
+                f"uploading document {display_name}",
+                paced=True,
+            )
+        return await telegram_call_with_flood_retry(
+            lambda: client.send_document(DUMP_CHAT_ID, path, **kwargs),
+            f"uploading document {display_name}",
+            paced=True,
+        )
 
     async def send_photo_file(path, part_caption):
         kwargs = dict(caption=part_caption, progress=upload_progress)
         try:
             if USER_SESSION_STRING:
-                return await user.send_photo(DUMP_CHAT_ID, path, **kwargs)
-            return await client.send_photo(DUMP_CHAT_ID, path, **kwargs)
+                return await telegram_call_with_flood_retry(
+                    lambda: user.send_photo(DUMP_CHAT_ID, path, **kwargs),
+                    f"uploading photo {display_name}",
+                    paced=True,
+                )
+            return await telegram_call_with_flood_retry(
+                lambda: client.send_photo(DUMP_CHAT_ID, path, **kwargs),
+                f"uploading photo {display_name}",
+                paced=True,
+            )
         except Exception as e:
             logger.warning(f"Could not send {path} as photo, falling back to document: {e}")
             return await send_document_file(path, part_caption)
@@ -2048,17 +2124,26 @@ async def upload_local_file(client, message, user_id, file_path, display_name,
                 dest_title = dest_chat.title or dest_title
             except Exception as e:
                 logger.warning(f"Could not load destination chat title: {e}")
-            delivered = await client.send_message(
-                message.chat.id,
-                t(user_id, "dest_delivered", title=dest_title),
+            delivered = await telegram_call_with_flood_retry(
+                lambda: client.send_message(
+                    message.chat.id,
+                    t(user_id, "dest_delivered", title=dest_title),
+                ),
+                "sending the destination confirmation",
             )
             asyncio.create_task(delayed_delete(delivered, 600))
             if dest_copy_failed:
-                await client.send_message(message.chat.id, t(user_id, "dest_send_failed"))
+                await telegram_call_with_flood_retry(
+                    lambda: client.send_message(message.chat.id, t(user_id, "dest_send_failed")),
+                    "sending the destination failure note",
+                )
         else:
             for msg in user_msgs:
                 asyncio.create_task(delayed_delete(msg, 600))
-            warn = await client.send_message(message.chat.id, t(user_id, "file_deleted_warning"))
+            warn = await telegram_call_with_flood_retry(
+                lambda: client.send_message(message.chat.id, t(user_id, "file_deleted_warning")),
+                "sending the auto-delete notice",
+            )
             asyncio.create_task(delayed_delete(warn, 600))
 
     if os.path.exists(file_path):
@@ -2145,16 +2230,25 @@ async def _finish_folder_notifications(client, message, user_id, user_msgs,
             dest_title = dest_chat.title or dest_title
         except Exception as e:
             logger.warning(f"Could not load destination chat title: {e}")
-        delivered = await client.send_message(
-            message.chat.id, t(user_id, "dest_delivered", title=dest_title)
+        delivered = await telegram_call_with_flood_retry(
+            lambda: client.send_message(
+                message.chat.id, t(user_id, "dest_delivered", title=dest_title)
+            ),
+            "sending the destination confirmation",
         )
         asyncio.create_task(delayed_delete(delivered, 600))
         if dest_copy_failed:
-            await client.send_message(message.chat.id, t(user_id, "dest_send_failed"))
+            await telegram_call_with_flood_retry(
+                lambda: client.send_message(message.chat.id, t(user_id, "dest_send_failed")),
+                "sending the destination failure note",
+            )
     elif user_msgs:
         for msg in user_msgs:
             asyncio.create_task(delayed_delete(msg, 600))
-        warn = await client.send_message(message.chat.id, t(user_id, "file_deleted_warning"))
+        warn = await telegram_call_with_flood_retry(
+            lambda: client.send_message(message.chat.id, t(user_id, "file_deleted_warning")),
+            "sending the auto-delete notice",
+        )
         asyncio.create_task(delayed_delete(warn, 600))
 
 
@@ -2273,9 +2367,12 @@ async def process_folder_single(client, message, user_id, info, status_message):
     await _finish_folder_notifications(
         client, message, user_id, user_msgs, delivered, dest_failed
     )
-    summary = await client.send_message(
-        message.chat.id,
-        t(user_id, "folder_done", sent=sent, skipped=skipped, failed=failed),
+    summary = await telegram_call_with_flood_retry(
+        lambda: client.send_message(
+            message.chat.id,
+            t(user_id, "folder_done", sent=sent, skipped=skipped, failed=failed),
+        ),
+        "sending the folder summary",
     )
     asyncio.create_task(delayed_delete(summary, 600))
 
@@ -2436,9 +2533,12 @@ async def process_folder_zip(client, message, user_id, info, status_message):
         await _finish_folder_notifications(
             client, message, user_id, user_msgs, delivered, dest_failed
         )
-        summary = await client.send_message(
-            message.chat.id,
-            t(user_id, "folder_done", sent=len(downloaded), skipped=skipped, failed=failed),
+        summary = await telegram_call_with_flood_retry(
+            lambda: client.send_message(
+                message.chat.id,
+                t(user_id, "folder_done", sent=len(downloaded), skipped=skipped, failed=failed),
+            ),
+            "sending the folder summary",
         )
         asyncio.create_task(delayed_delete(summary, 600))
     finally:
