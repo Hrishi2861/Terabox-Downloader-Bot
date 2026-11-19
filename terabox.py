@@ -21,6 +21,8 @@ import re
 import secrets
 import glob
 import shutil
+import subprocess
+import zipfile
 from html import escape
 from flask import Flask, render_template
 from threading import Thread
@@ -2377,6 +2379,98 @@ async def process_folder_single(client, message, user_id, info, status_message):
     asyncio.create_task(delayed_delete(summary, 600))
 
 
+def _zip_part_sort_key(path):
+    name = os.path.basename(path)
+    match = re.search(r"\.z(\d+)$", name)
+    if match:
+        return (0, int(match.group(1)))
+    match = re.search(r"\.zip\.(\d+)$", name)
+    if match:
+        return (0, int(match.group(1)))
+    return (1, 0)
+
+
+def _create_single_zip(archive_path, items):
+    with zipfile.ZipFile(
+        archive_path, "w", zipfile.ZIP_STORED, allowZip64=True
+    ) as archive:
+        for path, rel in items:
+            if os.path.exists(path):
+                archive.write(path, rel)
+    return [archive_path]
+
+
+def create_folder_archive(workdir, archive_base, items, split_size):
+    """Create a zip archive (splitting into volumes when needed).
+
+    Uses the ``zip`` binary when available, then ``7z``/``7za``, and finally
+    Python's stdlib ``zipfile`` so the bot never fails just because the image
+    lacks the zip package. Runs in a worker thread.
+    """
+    existing = [(p, rel) for p, rel in items if os.path.exists(p)]
+    if not existing:
+        return []
+
+    total_bytes = sum(os.path.getsize(p) for p, _ in existing)
+    margin = min(50 * 1024 * 1024, max(0, split_size // 10))
+    part_bytes = max(1, split_size - margin)
+    part_mb = max(1, part_bytes // (1024 * 1024))
+    archive_path = archive_base + ".zip"
+    needs_split = total_bytes > part_bytes
+
+    zip_bin = shutil.which("zip")
+    seven_zip = shutil.which("7z") or shutil.which("7za")
+
+    def run(cmd):
+        subprocess.run(
+            cmd, cwd=workdir, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    if zip_bin:
+        cmd = [zip_bin, "-r", "-q"]
+        if needs_split:
+            cmd += ["-s", f"{part_mb}m"]
+        cmd += [archive_path, "."]
+        run(cmd)
+    elif seven_zip:
+        cmd = [seven_zip, "a", "-tzip"]
+        if needs_split:
+            cmd += [f"-v{part_mb}m"]
+        cmd += [archive_path, "."]
+        run(cmd)
+    elif not needs_split:
+        return _create_single_zip(archive_path, existing)
+    else:
+        # No zip tool at all: send independent archives that each fit the
+        # upload limit. A single file larger than the limit still cannot fit.
+        groups = []
+        current = []
+        current_size = 0
+        for item in existing:
+            size = os.path.getsize(item[0])
+            if current and current_size + size > part_bytes:
+                groups.append(current)
+                current = []
+                current_size = 0
+            current.append(item)
+            current_size += size
+        if current:
+            groups.append(current)
+        paths = []
+        for index, group in enumerate(groups, 1):
+            path = f"{archive_base}_part{index}.zip"
+            _create_single_zip(path, group)
+            paths.append(path)
+        return paths
+
+    parts = [
+        p for p in glob.glob(archive_base + ".*")
+        if os.path.isfile(p) and re.search(r"\.zip(\.\d+)?$|\.z\d+$", p)
+    ]
+    return sorted(parts, key=_zip_part_sort_key)
+
+
 async def process_folder_zip(client, message, user_id, info, status_message):
     files, skipped = _split_folder_files(info)
     if not files:
@@ -2482,23 +2576,15 @@ async def process_folder_zip(client, message, user_id, info, status_message):
             status_message,
             f"🗜️ Creating archive\n{len(downloaded)} files • {format_size(total_bytes)}",
         )
-        cmd = ["zip", "-r", "-q"]
-        split = total_bytes > (SPLIT_SIZE - 50 * 1024 * 1024)
-        if split:
-            part_mb = max(1, int((SPLIT_SIZE - 50 * 1024 * 1024) // (1024 * 1024)))
-            cmd += ["-s", f"{part_mb}m"]
-        cmd += [archive_path, "."]
-        proc = await asyncio.create_subprocess_exec(*cmd, cwd=workdir)
-        await proc.wait()
-        if proc.returncode != 0:
-            logger.error(f"zip failed with code {proc.returncode}")
+        try:
+            parts = await asyncio.to_thread(
+                create_folder_archive,
+                workdir, archive_base, downloaded, SPLIT_SIZE,
+            )
+        except Exception as e:
+            logger.exception(f"Could not create folder archive: {e}")
             await message.reply_text(t(user_id, "download_failed"))
             return
-
-        parts = sorted(
-            glob.glob(archive_base + ".*"),
-            key=lambda p: (p.endswith(".zip"), p),
-        )
         if not parts:
             await message.reply_text(t(user_id, "download_failed"))
             return

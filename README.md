@@ -42,8 +42,9 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
   use the normal video pipeline, images are sent as photos (up to Telegram's
   10 MB photo limit; larger images are sent as documents), and everything
   else is sent as a document. In *Zipped* mode the same parallel downloads
-  are archived into a `.zip`, split into `.z01`, `.z02`, … parts when it
-  exceeds the upload limit.
+  are archived with the `zip` binary (falling back to `7z` and then Python's
+  `zipfile`), split into numbered volumes when the archive exceeds the
+  upload limit.
 - Pending setting inputs expire after 5 minutes and can be aborted with
   `/cancel`.
 
