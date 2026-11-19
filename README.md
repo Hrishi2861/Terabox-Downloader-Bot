@@ -40,6 +40,7 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - `FSUB_ID`: The Force Subscribe Channel, users will not be able to use your bot without joining the Channel. (Enter the Channel/Group ID starting with -100). `Int`
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
+- `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot appends `/download?url=...`). `Str`
 
 ---
 ### For farther assistance visit my support group: [**@JetMirror**](https://t.me/jetmirrorchatz).

@@ -98,6 +98,12 @@ else:
 MONGO_URI = os.environ.get('MONGO_URI', '')
 INDEX_CHAT_ID = os.environ.get('INDEX_CHAT_ID', '')
 
+DOWNLOAD_API = os.environ.get('DOWNLOAD_API', '')
+if len(DOWNLOAD_API) == 0:
+    logging.error("DOWNLOAD_API variable is missing! Exiting now")
+    exit(1)
+DOWNLOAD_API = DOWNLOAD_API.rstrip('/')
+
 if MONGO_URI and INDEX_CHAT_ID:
     INDEX_CHAT_ID = int(INDEX_CHAT_ID)
     mongo_client = MongoClient(MONGO_URI)
@@ -1577,7 +1583,7 @@ async def handle_message(client: Client, message: Message):
 
     status_message = await message.reply_text(t(user_id, "sending_media"))
 
-    final_url = f"http://localhost:8000/download?url={encoded_url}"
+    final_url = f"{DOWNLOAD_API}/download?url={encoded_url}"
     download = aria2.add_uris([final_url])
 
     start_time = datetime.now()
