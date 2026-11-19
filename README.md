@@ -28,6 +28,16 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
     the 10-minute auto-delete only applies when no destination is set.
     If the copy fails at upload time, the video is sent to the user's chat
     instead with an error note.
+  - **Folder Settings:** choose how folder links are delivered. **📄 Single
+    files** (the default) sends every file separately; **🗜️ Zipped** packs
+    the folder into an archive. The choice is saved per user.
+- Folder links are detected automatically. Every Terabox link is preflighted
+  against the download API's `/api` endpoint: single-file links stream from
+  `/download` exactly as before, while folder links are expanded and all
+  downloadable files are sent. In *Single files* mode videos use the normal
+  video pipeline and other files are sent as documents; in *Zipped* mode a
+  `.zip` is built and split into `.z01`, `.z02`, … parts when it exceeds the
+  upload limit.
 - Pending setting inputs expire after 5 minutes and can be aborted with
   `/cancel`.
 
@@ -40,7 +50,7 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - `FSUB_ID`: The Force Subscribe Channel, users will not be able to use your bot without joining the Channel. (Enter the Channel/Group ID starting with -100). `Int`
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
-- `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot appends `/download?url=...`). `Str`
+- `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot uses `/api` to detect files/folders and `/download?url=...` for single-file streams). `Str`
 
 ---
 ### For farther assistance visit my support group: [**@JetMirror**](https://t.me/jetmirrorchatz).

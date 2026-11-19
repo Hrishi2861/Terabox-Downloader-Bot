@@ -19,6 +19,9 @@ import io
 import requests
 import re
 import secrets
+import glob
+import shutil
+from html import escape
 from flask import Flask, render_template
 from threading import Thread
 from translations import TRANSLATIONS, LANGUAGES, LANGUAGE_CODES
@@ -342,6 +345,11 @@ SETTINGS_TTL = 300
 pending_inputs = {}
 PENDING_TTL = 300
 user_settings_cache = {}
+DEFAULT_FOLDER_MODE = "single"
+
+
+def folder_mode_label(uid, mode):
+    return t(uid, "folder_zip" if mode == "zip" else "folder_single")
 
 def get_user_setting(user_id, key, default=None):
     cache_key = (user_id, key)
@@ -384,15 +392,32 @@ async def build_settings_status(client, uid):
             logger.warning(f"Could not load destination chat title: {e}")
     else:
         dest_label = t(uid, "dest_default")
-    return t(uid, "settings_status",
-             language=language_name, thumb=thumb_label, dest=dest_label)
+    folder_mode = get_user_setting(uid, "folder_mode", DEFAULT_FOLDER_MODE)
+    folder_label = folder_mode_label(uid, folder_mode)
+    return (
+        t(uid, "settings_status",
+          language=language_name, thumb=thumb_label, dest=dest_label)
+        + "\n" + t(uid, "folder_current", mode=folder_label)
+    )
 
 def build_settings_menu_keyboard(token):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🌐 Language/भाषा", callback_data=f"us:open:{token}")],
         [InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"us:thumb:{token}")],
         [InlineKeyboardButton("📥 Leech Destination", callback_data=f"us:dest:{token}")],
+        [InlineKeyboardButton("📁 Folder Settings", callback_data=f"us:folder:{token}")],
         [InlineKeyboardButton("❌ Close", callback_data=f"us:close:{token}")],
+    ])
+
+def build_folder_submenu_keyboard(token, mode, uid):
+    zip_label = ("✅ " if mode == "zip" else "") + t(uid, "folder_zip")
+    single_label = ("✅ " if mode == "single" else "") + t(uid, "folder_single")
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(zip_label, callback_data=f"us:folderset:{token}:zip"),
+            InlineKeyboardButton(single_label, callback_data=f"us:folderset:{token}:single"),
+        ],
+        [InlineKeyboardButton("← Back", callback_data=f"us:back:{token}")],
     ])
 
 def build_thumb_submenu_keyboard(token, has_thumb=False):
@@ -990,6 +1015,39 @@ async def user_settings_callback(client: Client, callback_query):
             logger.warning(f"Could not remove destination: {e}")
         return
 
+    if action == "folder":
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "folder_settings"),
+                reply_markup=build_folder_submenu_keyboard(
+                    token,
+                    get_user_setting(uid, "folder_mode", DEFAULT_FOLDER_MODE),
+                    uid,
+                ),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not open folder sub-menu: {e}")
+        return
+
+    if action == "folderset":
+        mode = parts[3] if len(parts) == 4 else ""
+        if mode not in ("zip", "single"):
+            await callback_query.answer("Invalid folder mode.", show_alert=True)
+            return
+        set_user_setting(uid, folder_mode=mode)
+        await callback_query.answer()
+        try:
+            await callback_query.message.edit_text(
+                t(uid, "folder_saved", mode=folder_mode_label(uid, mode)),
+                reply_markup=build_settings_back_keyboard(token),
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.warning(f"Could not save folder mode: {e}")
+        return
+
     await callback_query.answer("Invalid settings action.", show_alert=True)
 
 DEST_ID_PATTERN = re.compile(r'^-100\d{6,}$')
@@ -1529,6 +1587,706 @@ async def update_status_message(status_message, text):
     except Exception as e:
         logger.error(f"Failed to update status message: {e}")
 
+VIDEO_EXTENSIONS = {
+    ".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".m4v",
+    ".flv", ".wmv", ".mpg", ".mpeg", ".3gp", ".vob", ".m2ts", ".mts",
+}
+
+
+def is_video_file(path):
+    return os.path.splitext(path)[1].lower() in VIDEO_EXTENSIONS
+
+
+def fetch_link_info(url):
+    """Ask the download API whether a Terabox link is a file or a folder."""
+    try:
+        resp = requests.get(
+            f"{DOWNLOAD_API}/api", params={"url": url}, timeout=300
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, dict):
+            return {"status": "error", "message": "Invalid response from download API."}
+        return data
+    except Exception as e:
+        logger.error(f"Link preflight failed for {url}: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+def safe_relative_parts(name, fallback="file"):
+    raw = (name or "").replace("\\", "/")
+    parts = []
+    for part in raw.split("/"):
+        part = part.strip()
+        if not part or part in (".", ".."):
+            continue
+        part = re.sub(r'[\x00-\x1f<>:"|?*]', "_", part)
+        parts.append(part)
+    return parts or [fallback]
+
+
+def unique_relative_path(used, name, index):
+    parts = safe_relative_parts(name, fallback=f"file_{index}")
+    rel = os.path.join(*parts)
+    if rel in used:
+        base, ext = os.path.splitext(rel)
+        counter = index
+        while rel in used:
+            counter += 1
+            rel = f"{base}_{counter}{ext}"
+    used.add(rel)
+    return rel
+
+
+def truncate_filename(name, limit=180):
+    if len(name) <= limit:
+        return name
+    base, ext = os.path.splitext(name)
+    keep = max(1, limit - len(ext))
+    return base[:keep] + ext
+
+
+def make_status_updater(status_message, interval=15):
+    state = {"last": 0.0}
+
+    async def update(text):
+        now = time.time()
+        if now - state["last"] < interval:
+            return
+        state["last"] = now
+        await update_status_message(status_message, text)
+
+    async def force(text):
+        state["last"] = time.time()
+        await update_status_message(status_message, text)
+
+    update.force = force
+    return update
+
+
+def build_caption(name, user_id, first_name, extra=None):
+    head = f"✨ {escape(str(name))}\n"
+    if extra:
+        head += f"{escape(str(extra))}\n"
+    return (
+        head
+        + f"👤 ʟᴇᴇᴄʜᴇᴅ ʙʏ : <a href='tg://user?id={user_id}'>{first_name}</a>\n"
+        + f"📥 ᴜsᴇʀ ʟɪɴᴋ: tg://user?id={user_id}\n\n"
+        + "[ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴊᴇᴛ-ᴍɪʀʀᴏʀ ❤️🚀](https://t.me/JetMirror)"
+    )
+
+
+async def fetch_custom_thumb(client, user_id):
+    custom_thumb_id = get_user_setting(user_id, "thumbnail_file_id")
+    if not custom_thumb_id:
+        return None
+    try:
+        os.makedirs("downloads", exist_ok=True)
+        return await client.download_media(
+            custom_thumb_id,
+            file_name=f"downloads/{user_id}_thumb_custom.jpg",
+        )
+    except Exception as e:
+        logger.warning(f"Could not download custom thumbnail: {e}")
+        return None
+
+
+async def download_with_aria2(url, status_message, user_id, first_name,
+                              out_dir=None, out_name=None, label=None):
+    options = {}
+    if out_dir:
+        options["dir"] = os.path.abspath(out_dir)
+    if out_name:
+        options["out"] = out_name
+    try:
+        download = aria2.add_uris([url], options=options or None)
+    except Exception as e:
+        logger.error(f"aria2 could not add download: {e}")
+        return None
+
+    start_time = datetime.now()
+    stuck_start_time = None
+    cancelled = False
+    display_name = escape(str(label or download.name))
+
+    while not download.is_complete:
+        await asyncio.sleep(15)
+        download.update()
+        progress = download.progress
+        elapsed_time = datetime.now() - start_time
+        elapsed_minutes, elapsed_seconds = divmod(elapsed_time.seconds, 60)
+
+        status = str(getattr(download, "status", "")).lower()
+        if status in ("error", "removed") or getattr(download, "has_failed", False):
+            logger.error(
+                f"aria2 reported failure for {url}: {getattr(download, 'error_message', '')}"
+            )
+            return None
+
+        if progress == 0 and download.completed_length == 0:
+            if stuck_start_time is None:
+                stuck_start_time = time.time()
+            elif time.time() - stuck_start_time > 120:
+                logger.info(f"Download stuck at 0% for over 120s, cancelling: {url}")
+                try:
+                    aria2.remove([download])
+                except Exception:
+                    pass
+                cancelled = True
+                break
+        else:
+            stuck_start_time = None
+
+        status_text = (
+            f"┏ ғɪʟᴇɴᴀᴍᴇ: {display_name}\n"
+            f"┠ [{'★' * int(progress / 10)}{'☆' * (10 - int(progress / 10))}] {progress:.2f}%\n"
+            f"┠ ᴘʀᴏᴄᴇssᴇᴅ: {format_size(download.completed_length)} ᴏғ {format_size(download.total_length)}\n"
+            f"┠ sᴛᴀᴛᴜs: 📥 Downloading\n"
+            f"┠ ᴇɴɢɪɴᴇ: <b><u>Aria2c v1.37.0</u></b>\n"
+            f"┠ sᴘᴇᴇᴅ: {format_size(download.download_speed)}/s\n"
+            f"┠ ᴇᴛᴀ: {download.eta} | ᴇʟᴀᴘsᴇᴅ: {elapsed_minutes}m {elapsed_seconds}s\n"
+            f"┖ ᴜsᴇʀ: <a href='tg://user?id={user_id}'>{first_name}</a> | ɪᴅ: {user_id}\n"
+        )
+        await update_status_message(status_message, status_text)
+
+    if cancelled:
+        return None
+    if getattr(download, "has_failed", False):
+        logger.error(
+            f"aria2 reported failure for {url}: {getattr(download, 'error_message', '')}"
+        )
+        return None
+    if not download.files:
+        return None
+    return download
+
+
+def build_video_kwargs(caption, duration, width, height, thumb, progress_func):
+    kwargs = dict(caption=caption, progress=progress_func)
+    if duration:
+        kwargs["duration"] = duration
+    if width and height:
+        kwargs["width"] = width
+        kwargs["height"] = height
+    if thumb:
+        kwargs["thumb"] = thumb
+    return kwargs
+
+
+async def split_video_with_ffmpeg(input_path, output_prefix, split_size,
+                                  status_message, update_status):
+    try:
+        original_ext = os.path.splitext(input_path)[1].lower() or ".mp4"
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", input_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
+        total_duration = float(stdout.decode().strip())
+
+        file_size = os.path.getsize(input_path)
+        parts = math.ceil(file_size / split_size)
+        if parts == 1:
+            return [input_path]
+
+        duration_per_part = total_duration / parts
+        split_files = []
+        for i in range(parts):
+            await update_status.force(
+                f"✂️ Splitting {os.path.basename(input_path)}\nPart {i + 1}/{parts}"
+            )
+            output_path = f"{output_prefix}.{i + 1:03d}{original_ext}"
+            cmd = [
+                "xtra", "-y", "-ss", str(i * duration_per_part),
+                "-i", input_path, "-t", str(duration_per_part),
+                "-c", "copy", "-map", "0",
+                "-avoid_negative_ts", "make_zero",
+                output_path,
+            ]
+            proc = await asyncio.create_subprocess_exec(*cmd)
+            await proc.wait()
+            split_files.append(output_path)
+        return split_files
+    except Exception as e:
+        logger.error(f"Split error: {e}")
+        raise
+
+
+def split_raw_file(path, part_size, chunk_size=8 * 1024 * 1024):
+    base, ext = os.path.splitext(path)
+    parts = []
+    out = None
+    written = 0
+    try:
+        with open(path, "rb") as src:
+            while True:
+                chunk = src.read(chunk_size)
+                if not chunk:
+                    break
+                if out is None or written >= part_size:
+                    if out:
+                        out.close()
+                    part_path = f"{base}.part{len(parts) + 1:03d}{ext}"
+                    out = open(part_path, "wb")
+                    parts.append(part_path)
+                    written = 0
+                out.write(chunk)
+                written += len(chunk)
+    finally:
+        if out:
+            out.close()
+    return parts
+
+
+async def upload_local_file(client, message, user_id, file_path, display_name,
+                            caption, status_message, custom_thumb_path=None,
+                            notify=True):
+    start_time = datetime.now()
+    update_status = make_status_updater(status_message)
+    display_name = escape(str(display_name))
+    file_size = os.path.getsize(file_path)
+    user_msgs = []
+    delivered_to_custom = False
+    dest_copy_failed = False
+    custom_dest = get_user_setting(user_id, "leech_destination")
+    first_name = message.from_user.first_name or "User"
+
+    async def upload_progress(current, total):
+        progress = (current / total) * 100 if total else 0
+        elapsed_time = datetime.now() - start_time
+        elapsed_minutes, elapsed_seconds = divmod(elapsed_time.seconds, 60)
+        await update_status(
+            f"┏ ғɪʟᴇɴᴀᴍᴇ: {display_name}\n"
+            f"┠ [{'★' * int(progress / 10)}{'☆' * (10 - int(progress / 10))}] {progress:.2f}%\n"
+            f"┠ ᴘʀᴏᴄᴇssᴇᴅ: {format_size(current)} ᴏғ {format_size(total)}\n"
+            f"┠ sᴛᴀᴛᴜs: 📤 Uploading to Telegram\n"
+            f"┠ ᴇɴɢɪɴᴇ: <b><u>PyroFork v2.2.11</u></b>\n"
+            f"┠ sᴘᴇᴇᴅ: {format_size(current / elapsed_time.seconds if elapsed_time.seconds > 0 else 0)}/s\n"
+            f"┠ ᴇʟᴀᴘsᴇᴅ: {elapsed_minutes}m {elapsed_seconds}s\n"
+            f"┖ ᴜsᴇʀ: <a href='tg://user?id={user_id}'>{first_name}</a> | ɪᴅ: {user_id}\n"
+        )
+
+    async def deliver(sent):
+        nonlocal delivered_to_custom, dest_copy_failed
+        if custom_dest:
+            try:
+                msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
+                delivered_to_custom = True
+                return msg
+            except Exception as e:
+                logger.error(f"Could not copy to custom destination {custom_dest}: {e}")
+                msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+                dest_copy_failed = True
+                return msg
+        return await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
+
+    async def send_video_file(path, part_caption):
+        duration, width, height = await get_video_metadata(path)
+        thumb = custom_thumb_path or await generate_thumbnail(path, duration)
+        kwargs = build_video_kwargs(part_caption, duration, width, height, thumb, upload_progress)
+        if USER_SESSION_STRING:
+            return await user.send_video(DUMP_CHAT_ID, path, **kwargs)
+        return await client.send_video(DUMP_CHAT_ID, path, **kwargs)
+
+    async def send_document_file(path, part_caption):
+        kwargs = dict(caption=part_caption, progress=upload_progress)
+        if custom_thumb_path:
+            kwargs["thumb"] = custom_thumb_path
+        if USER_SESSION_STRING:
+            return await user.send_document(DUMP_CHAT_ID, path, **kwargs)
+        return await client.send_document(DUMP_CHAT_ID, path, **kwargs)
+
+    if is_video_file(file_path) and file_size > SPLIT_SIZE:
+        await update_status.force(f"✂️ Splitting {display_name} ({format_size(file_size)})")
+        split_files = await split_video_with_ffmpeg(
+            file_path, os.path.splitext(file_path)[0], SPLIT_SIZE,
+            status_message, update_status,
+        )
+        try:
+            for i, part in enumerate(split_files):
+                part_caption = f"{caption}\n\nPart {i + 1}/{len(split_files)}"
+                await update_status.force(
+                    f"📤 Uploading part {i + 1}/{len(split_files)}\n{os.path.basename(part)}"
+                )
+                sent = await send_video_file(part, part_caption)
+                msg = await deliver(sent)
+                if msg:
+                    user_msgs.append(msg)
+                try:
+                    os.remove(part)
+                except Exception:
+                    pass
+        finally:
+            for part in split_files:
+                if part == file_path:
+                    continue
+                try:
+                    os.remove(part)
+                except Exception:
+                    pass
+    elif is_video_file(file_path):
+        await update_status.force(f"📤 Uploading {display_name}\nSize: {format_size(file_size)}")
+        sent = await send_video_file(file_path, caption)
+        msg = await deliver(sent)
+        if msg:
+            user_msgs.append(msg)
+    else:
+        if file_size > SPLIT_SIZE:
+            parts = split_raw_file(file_path, SPLIT_SIZE)
+            try:
+                for i, part in enumerate(parts):
+                    part_caption = f"{caption}\n\nPart {i + 1}/{len(parts)}"
+                    await update_status.force(
+                        f"📤 Uploading part {i + 1}/{len(parts)}\n{os.path.basename(part)}"
+                    )
+                    sent = await send_document_file(part, part_caption)
+                    msg = await deliver(sent)
+                    if msg:
+                        user_msgs.append(msg)
+            finally:
+                for part in parts:
+                    try:
+                        os.remove(part)
+                    except Exception:
+                        pass
+        else:
+            await update_status.force(f"📤 Uploading {display_name}\nSize: {format_size(file_size)}")
+            sent = await send_document_file(file_path, caption)
+            msg = await deliver(sent)
+            if msg:
+                user_msgs.append(msg)
+
+    if notify:
+        if delivered_to_custom:
+            dest_title = str(custom_dest)
+            try:
+                dest_chat = await client.get_chat(int(custom_dest))
+                dest_title = dest_chat.title or dest_title
+            except Exception as e:
+                logger.warning(f"Could not load destination chat title: {e}")
+            delivered = await client.send_message(
+                message.chat.id,
+                t(user_id, "dest_delivered", title=dest_title),
+            )
+            asyncio.create_task(delayed_delete(delivered, 600))
+            if dest_copy_failed:
+                await client.send_message(message.chat.id, t(user_id, "dest_send_failed"))
+        else:
+            for msg in user_msgs:
+                asyncio.create_task(delayed_delete(msg, 600))
+            warn = await client.send_message(message.chat.id, t(user_id, "file_deleted_warning"))
+            asyncio.create_task(delayed_delete(warn, 600))
+
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+
+    return {
+        "user_msgs": user_msgs,
+        "delivered_to_custom": delivered_to_custom,
+        "dest_copy_failed": dest_copy_failed,
+    }
+
+
+async def process_single_url(client, message, user_id, download_url,
+                             status_message, display_name=None,
+                             caption_extra=None, custom_thumb_path=None,
+                             own_thumb=True, notify=True,
+                             out_dir=None, out_name=None):
+    first_name = message.from_user.first_name or "User"
+    download = await download_with_aria2(
+        download_url, status_message, user_id, first_name,
+        out_dir=out_dir, out_name=out_name, label=display_name
+    )
+    if download is None:
+        return {
+            "ok": False,
+            "user_msgs": [],
+            "delivered_to_custom": False,
+            "dest_copy_failed": False,
+        }
+    if not download.files:
+        logger.error(f"aria2 returned no files for {download_url}")
+        return {
+            "ok": False,
+            "user_msgs": [],
+            "delivered_to_custom": False,
+            "dest_copy_failed": False,
+        }
+
+    file_path = download.files[0].path
+    name = display_name or download.name
+    caption = build_caption(name, user_id, first_name, caption_extra)
+
+    thumb_path = custom_thumb_path
+    if own_thumb and not thumb_path:
+        thumb_path = await fetch_custom_thumb(client, user_id)
+
+    try:
+        result = await upload_local_file(
+            client, message, user_id, file_path, name, caption,
+            status_message, custom_thumb_path=thumb_path, notify=notify,
+        )
+    finally:
+        if own_thumb and thumb_path and os.path.exists(thumb_path):
+            try:
+                os.remove(thumb_path)
+            except Exception:
+                pass
+
+    result["ok"] = True
+    return result
+
+
+def _split_folder_files(info):
+    downloadable = []
+    skipped = 0
+    for f in info.get("files") or []:
+        if f.get("downloadable") and f.get("download_link"):
+            downloadable.append(f)
+        else:
+            skipped += 1
+    return downloadable, skipped
+
+
+async def _finish_folder_notifications(client, message, user_id, user_msgs,
+                                        delivered_to_custom, dest_copy_failed):
+    custom_dest = get_user_setting(user_id, "leech_destination")
+    if delivered_to_custom:
+        dest_title = str(custom_dest)
+        try:
+            dest_chat = await client.get_chat(int(custom_dest))
+            dest_title = dest_chat.title or dest_title
+        except Exception as e:
+            logger.warning(f"Could not load destination chat title: {e}")
+        delivered = await client.send_message(
+            message.chat.id, t(user_id, "dest_delivered", title=dest_title)
+        )
+        asyncio.create_task(delayed_delete(delivered, 600))
+        if dest_copy_failed:
+            await client.send_message(message.chat.id, t(user_id, "dest_send_failed"))
+    elif user_msgs:
+        for msg in user_msgs:
+            asyncio.create_task(delayed_delete(msg, 600))
+        warn = await client.send_message(message.chat.id, t(user_id, "file_deleted_warning"))
+        asyncio.create_task(delayed_delete(warn, 600))
+
+
+async def process_folder_single(client, message, user_id, info, status_message):
+    files, skipped = _split_folder_files(info)
+    if not files:
+        await message.reply_text(t(user_id, "folder_empty"))
+        return
+    total = len(files)
+    thumb_path = await fetch_custom_thumb(client, user_id)
+    stamp = int(time.time())
+    sent = failed = 0
+    user_msgs = []
+    delivered = False
+    dest_failed = False
+    try:
+        for i, f in enumerate(files, 1):
+            rel = f.get("filename") or f"file_{i}"
+            rel_caption = rel if len(rel) <= 200 else rel[:197] + "..."
+            base_name = safe_relative_parts(rel, fallback=f"file_{i}")[-1]
+            out_name = truncate_filename(f"folder_{user_id}_{stamp}_{i:04d}_{base_name}")
+            await update_status_message(
+                status_message,
+                f"📥 Downloading {i}/{total}\n{escape(rel_caption)}",
+            )
+            try:
+                result = await process_single_url(
+                    client, message, user_id,
+                    f"{DOWNLOAD_API}{f['download_link']}",
+                    status_message,
+                    display_name=rel_caption,
+                    caption_extra=f"📁 {i}/{total} • {rel_caption}",
+                    custom_thumb_path=thumb_path,
+                    own_thumb=False,
+                    notify=False,
+                    out_name=out_name,
+                )
+            except Exception as e:
+                logger.exception(f"Folder file {i}/{total} failed: {e}")
+                failed += 1
+                continue
+            if not result.get("ok"):
+                failed += 1
+                continue
+            sent += 1
+            user_msgs.extend(result.get("user_msgs") or [])
+            delivered = delivered or result.get("delivered_to_custom", False)
+            dest_failed = dest_failed or result.get("dest_copy_failed", False)
+    finally:
+        if thumb_path and os.path.exists(thumb_path):
+            try:
+                os.remove(thumb_path)
+            except Exception:
+                pass
+
+    await _finish_folder_notifications(
+        client, message, user_id, user_msgs, delivered, dest_failed
+    )
+    summary = await client.send_message(
+        message.chat.id,
+        t(user_id, "folder_done", sent=sent, skipped=skipped, failed=failed),
+    )
+    asyncio.create_task(delayed_delete(summary, 600))
+
+
+async def process_folder_zip(client, message, user_id, info, status_message):
+    files, skipped = _split_folder_files(info)
+    if not files:
+        await message.reply_text(t(user_id, "folder_empty"))
+        return
+
+    total = len(files)
+    first_name = message.from_user.first_name or "User"
+    stamp = int(time.time())
+    workdir = os.path.join("downloads", f"folder_{user_id}_{stamp}")
+    os.makedirs(workdir, exist_ok=True)
+
+    folder_name = info.get("filename") or "folder"
+    safe_name = re.sub(r"[^\w\-. ]+", "_", folder_name).strip(" .") or "folder"
+    safe_name = truncate_filename(safe_name, limit=100)
+    archive_base = os.path.join(os.path.abspath("downloads"), f"{safe_name}_{user_id}_{stamp}")
+    archive_path = archive_base + ".zip"
+    downloaded = []
+    total_bytes = 0
+    failed = 0
+    used_paths = set()
+    parts = []
+    user_msgs = []
+    delivered = False
+    dest_failed = False
+
+    try:
+        for i, f in enumerate(files, 1):
+            rel = unique_relative_path(used_paths, f.get("filename"), i)
+            rel = os.path.normpath(rel)
+            rel_caption = rel if len(rel) <= 200 else rel[:197] + "..."
+            flat_name = truncate_filename(f"{i:04d}_{os.path.basename(rel)}")
+            await update_status_message(
+                status_message,
+                f"📥 Downloading {i}/{total}\n{escape(rel_caption)}",
+            )
+            try:
+                download = await download_with_aria2(
+                    f"{DOWNLOAD_API}{f['download_link']}",
+                    status_message, user_id, first_name,
+                    out_dir=workdir, out_name=flat_name, label=rel_caption,
+                )
+            except Exception as e:
+                logger.exception(f"Folder download {i}/{total} failed: {e}")
+                failed += 1
+                continue
+            if download is None:
+                failed += 1
+                continue
+            src = download.files[0].path
+            if not os.path.isabs(src):
+                src = os.path.abspath(src)
+            if not os.path.exists(src):
+                fallback = os.path.join(os.path.abspath(workdir), os.path.basename(src))
+                if os.path.exists(fallback):
+                    src = fallback
+            target = os.path.join(workdir, rel)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            try:
+                if not os.path.exists(src):
+                    raise FileNotFoundError(src)
+                try:
+                    os.replace(src, target)
+                except Exception:
+                    shutil.move(src, target)
+            except Exception as e:
+                logger.exception(f"Could not store folder file {i}/{total}: {e}")
+                failed += 1
+                continue
+            downloaded.append((target, rel))
+            total_bytes += os.path.getsize(target)
+
+        if not downloaded:
+            await message.reply_text(t(user_id, "folder_empty"))
+            return
+
+        await update_status_message(
+            status_message,
+            f"🗜️ Creating archive\n{len(downloaded)} files • {format_size(total_bytes)}",
+        )
+        cmd = ["zip", "-r", "-q"]
+        split = total_bytes > (SPLIT_SIZE - 50 * 1024 * 1024)
+        if split:
+            part_mb = max(1, int((SPLIT_SIZE - 50 * 1024 * 1024) // (1024 * 1024)))
+            cmd += ["-s", f"{part_mb}m"]
+        cmd += [archive_path, "."]
+        proc = await asyncio.create_subprocess_exec(*cmd, cwd=workdir)
+        await proc.wait()
+        if proc.returncode != 0:
+            logger.error(f"zip failed with code {proc.returncode}")
+            await message.reply_text(t(user_id, "download_failed"))
+            return
+
+        parts = sorted(
+            glob.glob(archive_base + ".*"),
+            key=lambda p: (p.endswith(".zip"), p),
+        )
+        if not parts:
+            await message.reply_text(t(user_id, "download_failed"))
+            return
+
+        caption_extra = f"🗜️ {len(downloaded)} files • {format_size(total_bytes)}"
+        caption = build_caption(safe_name + ".zip", user_id, first_name, caption_extra)
+        thumb_path = await fetch_custom_thumb(client, user_id)
+        try:
+            for i, part in enumerate(parts, 1):
+                part_caption = caption
+                if len(parts) > 1:
+                    part_caption = f"{caption}\n\nPart {i}/{len(parts)}"
+                await update_status_message(
+                    status_message,
+                    f"📤 Uploading archive {i}/{len(parts)}\n{os.path.basename(part)}",
+                )
+                result = await upload_local_file(
+                    client, message, user_id, part,
+                    os.path.basename(part), part_caption, status_message,
+                    custom_thumb_path=thumb_path, notify=False,
+                )
+                user_msgs.extend(result.get("user_msgs") or [])
+                delivered = delivered or result.get("delivered_to_custom", False)
+                dest_failed = dest_failed or result.get("dest_copy_failed", False)
+        finally:
+            if thumb_path and os.path.exists(thumb_path):
+                try:
+                    os.remove(thumb_path)
+                except Exception:
+                    pass
+
+        await _finish_folder_notifications(
+            client, message, user_id, user_msgs, delivered, dest_failed
+        )
+        summary = await client.send_message(
+            message.chat.id,
+            t(user_id, "folder_done", sent=len(downloaded), skipped=skipped, failed=failed),
+        )
+        asyncio.create_task(delayed_delete(summary, 600))
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+        for part in parts:
+            try:
+                os.remove(part)
+            except Exception:
+                pass
+        try:
+            os.remove(archive_path)
+        except Exception:
+            pass
+
+
 @app.on_message(filters.text)
 async def handle_message(client: Client, message: Message):
     if message.text.startswith('/'):
@@ -1557,7 +2315,7 @@ async def handle_message(client: Client, message: Message):
                 t(user_id, "must_join"), reply_markup=reply_markup
             )
             return
-    
+
     url = None
     for word in message.text.split():
         if is_valid_url(word):
@@ -1579,301 +2337,47 @@ async def handle_message(client: Client, message: Message):
             await message.delete()
             asyncio.create_task(delayed_delete(reply, remaining))
             return
-    encoded_url = urllib.parse.quote(url)
 
     status_message = await message.reply_text(t(user_id, "sending_media"))
 
-    final_url = f"{DOWNLOAD_API}/download?url={encoded_url}"
-    download = aria2.add_uris([final_url])
+    try:
+        info = await asyncio.to_thread(fetch_link_info, url)
+    except Exception as e:
+        logger.error(f"Link preflight crashed: {e}")
+        info = {"status": "error", "message": str(e)}
 
-    start_time = datetime.now()
-    stuck_start_time = None
-    cancelled = False
-
-    while not download.is_complete:
-        await asyncio.sleep(15)
-        download.update()
-        progress = download.progress
-
-        elapsed_time = datetime.now() - start_time
-        elapsed_minutes, elapsed_seconds = divmod(elapsed_time.seconds, 60)
-
-        if progress == 0 and download.completed_length == 0:
-            if stuck_start_time is None:
-                stuck_start_time = time.time()
-            elif time.time() - stuck_start_time > 120:
-                logger.info(f"Download stuck at 0% for over 120s, cancelling: {final_url}")
-                aria2.remove([download])
-                cancelled = True
-                break
-        else:
-            stuck_start_time = None
-
-        status_text = (
-            f"┏ ғɪʟᴇɴᴀᴍᴇ: {download.name}\n"
-            f"┠ [{'★' * int(progress / 10)}{'☆' * (10 - int(progress / 10))}] {progress:.2f}%\n"
-            f"┠ ᴘʀᴏᴄᴇssᴇᴅ: {format_size(download.completed_length)} ᴏғ {format_size(download.total_length)}\n"
-            f"┠ sᴛᴀᴛᴜs: 📥 Downloading\n"
-            f"┠ ᴇɴɢɪɴᴇ: <b><u>Aria2c v1.37.0</u></b>\n"
-            f"┠ sᴘᴇᴇᴅ: {format_size(download.download_speed)}/s\n"
-            f"┠ ᴇᴛᴀ: {download.eta} | ᴇʟᴀᴘsᴇᴅ: {elapsed_minutes}m {elapsed_seconds}s\n"
-            f"┖ ᴜsᴇʀ: <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a> | ɪᴅ: {user_id}\n"
-            )
-        while True:
-            try:
-                await update_status_message(status_message, status_text)
-                break
-            except FloodWait as e:
-                logger.error(f"Flood wait detected! Sleeping for {e.value} seconds")
-                await asyncio.sleep(e.value)
-
-    if cancelled:
+    if info.get("status") != "success":
         try:
             await status_message.delete()
-            await message.delete()
-        except:
+        except Exception:
             pass
-        await message.reply_text(t(user_id, "download_failed"))
+        reason = str(info.get("message") or t(user_id, "download_failed"))
+        await message.reply_text(reason[:3500], parse_mode=None)
         return
 
-    file_path = download.files[0].path
-    caption = (
-        f"✨ {download.name}\n"
-        f"👤 ʟᴇᴇᴄʜᴇᴅ ʙʏ : <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>\n"
-        f"📥 ᴜsᴇʀ ʟɪɴᴋ: tg://user?id={user_id}\n\n"
-        "[ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴊᴇᴛ-ᴍɪʀʀᴏʀ ❤️🚀](https://t.me/JetMirror)"
-    )
-
-    last_update_time = time.time()
-    UPDATE_INTERVAL = 15
-
-    async def update_status(message, text):
-        nonlocal last_update_time
-        current_time = time.time()
-        if current_time - last_update_time >= UPDATE_INTERVAL:
-            try:
-                await message.edit_text(text)
-                last_update_time = current_time
-            except FloodWait as e:
-                logger.warning(f"FloodWait: Sleeping for {e.value}s")
-                await asyncio.sleep(e.value)
-                await update_status(message, text)
-            except Exception as e:
-                logger.error(f"Error updating status: {e}")
-
-    async def upload_progress(current, total):
-        progress = (current / total) * 100
-        elapsed_time = datetime.now() - start_time
-        elapsed_minutes, elapsed_seconds = divmod(elapsed_time.seconds, 60)
-
-        status_text = (
-            f"┏ ғɪʟᴇɴᴀᴍᴇ: {download.name}\n"
-            f"┠ [{'★' * int(progress / 10)}{'☆' * (10 - int(progress / 10))}] {progress:.2f}%\n"
-            f"┠ ᴘʀᴏᴄᴇssᴇᴅ: {format_size(current)} ᴏғ {format_size(total)}\n"
-            f"┠ sᴛᴀᴛᴜs: 📤 Uploading to Telegram\n"
-            f"┠ ᴇɴɢɪɴᴇ: <b><u>PyroFork v2.2.11</u></b>\n"
-            f"┠ sᴘᴇᴇᴅ: {format_size(current / elapsed_time.seconds if elapsed_time.seconds > 0 else 0)}/s\n"
-            f"┠ ᴇʟᴀᴘsᴇᴅ: {elapsed_minutes}m {elapsed_seconds}s\n"
-            f"┖ ᴜsᴇʀ: <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a> | ɪᴅ: {user_id}\n"
-        )
-        await update_status(status_message, status_text)
-
-    async def split_video_with_ffmpeg(input_path, output_prefix, split_size):
+    if info.get("isdir") is True:
+        mode = get_user_setting(user_id, "folder_mode", DEFAULT_FOLDER_MODE)
         try:
-            original_ext = os.path.splitext(input_path)[1].lower() or '.mp4'
-            start_time = datetime.now()
-            last_progress_update = time.time()
-            
-            proc = await asyncio.create_subprocess_exec(
-                'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
-                '-of', 'default=noprint_wrappers=1:nokey=1', input_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await proc.communicate()
-            total_duration = float(stdout.decode().strip())
-            
-            file_size = os.path.getsize(input_path)
-            parts = math.ceil(file_size / split_size)
-            
-            if parts == 1:
-                return [input_path]
-            
-            duration_per_part = total_duration / parts
-            split_files = []
-            
-            for i in range(parts):
-                current_time = time.time()
-                if current_time - last_progress_update >= UPDATE_INTERVAL:
-                    elapsed = datetime.now() - start_time
-                    status_text = (
-                        f"✂️ Splitting {os.path.basename(input_path)}\n"
-                        f"Part {i+1}/{parts}\n"
-                        f"Elapsed: {elapsed.seconds // 60}m {elapsed.seconds % 60}s"
-                    )
-                    await update_status(status_message, status_text)
-                    last_progress_update = current_time
-                
-                output_path = f"{output_prefix}.{i+1:03d}{original_ext}"
-                cmd = [
-                    'xtra', '-y', '-ss', str(i * duration_per_part),
-                    '-i', input_path, '-t', str(duration_per_part),
-                    '-c', 'copy', '-map', '0',
-                    '-avoid_negative_ts', 'make_zero',
-                    output_path
-                ]
-                
-                proc = await asyncio.create_subprocess_exec(*cmd)
-                await proc.wait()
-                split_files.append(output_path)
-            
-            return split_files
+            if mode == "zip":
+                await process_folder_zip(client, message, user_id, info, status_message)
+            else:
+                await process_folder_single(client, message, user_id, info, status_message)
         except Exception as e:
-            logger.error(f"Split error: {e}")
-            raise
-
-    def build_video_kwargs(caption, duration, width, height, thumb, progress_func):
-        kwargs = dict(caption=caption, progress=progress_func)
-        if duration:
-            kwargs['duration'] = duration
-        if width and height:
-            kwargs['width'] = width
-            kwargs['height'] = height
-        if thumb:
-            kwargs['thumb'] = thumb
-        return kwargs
-
-    async def handle_upload():
-        file_size = os.path.getsize(file_path)
-        user_msgs = []
-        delivered_to_custom = False
-        dest_copy_failed = False
-        custom_dest = get_user_setting(user_id, "leech_destination")
-        custom_thumb_path = None
-        custom_thumb_id = get_user_setting(user_id, "thumbnail_file_id")
-        if custom_thumb_id:
-            try:
-                os.makedirs("downloads", exist_ok=True)
-                custom_thumb_path = await client.download_media(
-                    custom_thumb_id,
-                    file_name=f"downloads/{user_id}_thumb_custom.jpg"
-                )
-            except Exception as e:
-                logger.warning(f"Could not download custom thumbnail: {e}")
-
-        if file_size > SPLIT_SIZE:
-            await update_status(
+            logger.exception(f"Folder processing failed: {e}")
+            await message.reply_text(t(user_id, "download_failed"))
+    else:
+        try:
+            result = await process_single_url(
+                client, message, user_id,
+                f"{DOWNLOAD_API}/download?url={urllib.parse.quote(url, safe='')}",
                 status_message,
-                f"✂️ Splitting {download.name} ({format_size(file_size)})"
+                display_name=info.get("filename") or None,
             )
-            
-            split_files = await split_video_with_ffmpeg(
-                file_path,
-                os.path.splitext(file_path)[0],
-                SPLIT_SIZE
-            )
-            
-            try:
-                for i, part in enumerate(split_files):
-                    part_caption = f"{caption}\n\nPart {i+1}/{len(split_files)}"
-                    await update_status(
-                        status_message,
-                        f"📤 Uploading part {i+1}/{len(split_files)}\n"
-                        f"{os.path.basename(part)}"
-                    )
-                    
-                    part_duration, part_width, part_height = await get_video_metadata(part)
-                    part_thumb = custom_thumb_path or await generate_thumbnail(part, part_duration)
-                    vkwargs = build_video_kwargs(part_caption, part_duration, part_width, part_height, part_thumb, upload_progress)
-
-                    if USER_SESSION_STRING:
-                        sent = await user.send_video(DUMP_CHAT_ID, part, **vkwargs)
-                    else:
-                        sent = await client.send_video(DUMP_CHAT_ID, part, **vkwargs)
-                    if custom_dest:
-                        try:
-                            user_msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
-                            delivered_to_custom = True
-                        except Exception as e:
-                            logger.error(f"Could not copy part to custom destination {custom_dest}: {e}")
-                            user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
-                            dest_copy_failed = True
-                    else:
-                        user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
-                    if user_msg:
-                        user_msgs.append(user_msg)
-                    os.remove(part)
-                    if part_thumb:
-                        part_thumb = None
-            finally:
-                for part in split_files:
-                    try: os.remove(part)
-                    except: pass
-        else:
-            await update_status(
-                status_message,
-                f"📤 Uploading {download.name}\n"
-                f"Size: {format_size(file_size)}"
-            )
-            
-            duration, width, height = await get_video_metadata(file_path)
-            full_thumb = custom_thumb_path or await generate_thumbnail(file_path, duration)
-            vkwargs = build_video_kwargs(caption, duration, width, height, full_thumb, upload_progress)
-
-            if USER_SESSION_STRING:
-                sent = await user.send_video(DUMP_CHAT_ID, file_path, **vkwargs)
-            else:
-                sent = await client.send_video(DUMP_CHAT_ID, file_path, **vkwargs)
-            if custom_dest:
-                try:
-                    user_msg = await client.copy_message(int(custom_dest), DUMP_CHAT_ID, sent.id)
-                    delivered_to_custom = True
-                except Exception as e:
-                    logger.error(f"Could not copy video to custom destination {custom_dest}: {e}")
-                    user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
-                    dest_copy_failed = True
-            else:
-                user_msg = await client.copy_message(message.chat.id, DUMP_CHAT_ID, sent.id)
-            if user_msg:
-                user_msgs.append(user_msg)
-
-        if delivered_to_custom:
-            dest_title = str(custom_dest)
-            try:
-                dest_chat = await client.get_chat(int(custom_dest))
-                dest_title = dest_chat.title or dest_title
-            except Exception as e:
-                logger.warning(f"Could not load destination chat title: {e}")
-            delivered = await client.send_message(
-                message.chat.id,
-                t(user_id, "dest_delivered", title=dest_title)
-            )
-            asyncio.create_task(delayed_delete(delivered, 600))
-            if dest_copy_failed:
-                await client.send_message(
-                    message.chat.id,
-                    t(user_id, "dest_send_failed")
-                )
-        else:
-            for msg in user_msgs:
-                asyncio.create_task(delayed_delete(msg, 600))
-            warn = await client.send_message(
-                message.chat.id,
-                t(user_id, "file_deleted_warning")
-            )
-            asyncio.create_task(delayed_delete(warn, 600))
-
-        if custom_thumb_path and os.path.exists(custom_thumb_path):
-            try:
-                os.remove(custom_thumb_path)
-            except Exception:
-                pass
-
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-    start_time = datetime.now()
-    await handle_upload()
+        except Exception as e:
+            logger.exception(f"Single-file processing failed: {e}")
+            result = {"ok": False}
+        if not result.get("ok"):
+            await message.reply_text(t(user_id, "download_failed"))
 
     try:
         await status_message.delete()
