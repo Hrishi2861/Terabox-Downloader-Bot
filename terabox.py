@@ -244,10 +244,19 @@ def build_dump_qr_keyboard(payment_method, user_id):
     ]])
 
 VALID_DOMAINS = [
-    'terabox.com', 'nephobox.com', '4funbox.com', 'mirrobox.com', 
-    'momerybox.com', 'teraboxapp.com', '1024tera.com', 
-    'terabox.app', 'gibibox.com', 'goaibox.com', 'terasharelink.com', 
-    'teraboxlink.com', 'terafileshare.com', 'teraboxshare.com'
+    # Keep in sync with BASE_DOMAINS in Terabox-API/terabox.py.
+    '1024-terabox.com', '1024box.com', '1024tera.co', '1024tera.com',
+    '1024terabox.com', '4funbox.co', '4funbox.com', '4funbox.in',
+    'bestclouddrive.com', 'dubox.com', 'fancybox.in', 'freeterabox.com',
+    'gibibox.com', 'goaibox.com', 'mirrorbox.com', 'mirrobox.com',
+    'momerybox.com', 'nephobox.com', 'pebibox.com', 'terabox.app',
+    'terabox.click', 'terabox.club', 'terabox.com', 'terabox.fun',
+    'terabox.link', 'teraboxapp.com', 'teraboxcdn.app', 'teraboxcdn.com',
+    'teraboxfree.com', 'teraboxlink.com', 'teraboxlite.com',
+    'teraboxshare.com', 'teraboxsharefile.com', 'teraboxurl.com',
+    'terafileshare.com', 'tera1024box.com', 'terasharefile.com',
+    'terasharelink.com', 'terashareus.com', 'tibibox.com',
+    'tttturbonet.com',
 ]
 last_update_time = 0
 
@@ -264,7 +273,10 @@ async def is_user_member(client, user_id):
     
 def is_valid_url(url):
     parsed_url = urlparse(url)
-    return any(parsed_url.netloc.endswith(domain) for domain in VALID_DOMAINS)
+    if parsed_url.scheme not in ('http', 'https'):
+        return False
+    host = (parsed_url.hostname or '').lower().rstrip('.')
+    return any(host == domain or host.endswith('.' + domain) for domain in VALID_DOMAINS)
 
 def format_size(size):
     if size < 1024:
