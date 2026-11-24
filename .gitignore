@@ -9,3 +9,6 @@ config.env
 
 # Runtime download artifacts
 *.aria2
+
+# Donation QR assets are kept on the server only, never published
+Pay-QR/
