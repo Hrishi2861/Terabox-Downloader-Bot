@@ -1,7 +1,33 @@
 This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 
+## Free tier and premium
+
+Free users get separate daily allowances that reset at **12:00 AM IST**:
+
+- 10 single-file TeraBox downloads per day
+- 10 `/random` uses per day
+- 10 `/search` uses per day
+- Folder downloads are locked
+
+Only successful results are counted. Failed downloads are refunded, and
+invalid links or searches with no results never use an allowance. The owner
+bypasses every limit.
+
+Two plans unlock unlimited downloads, folder downloads, `/random` and
+`/search`:
+
+| Plan | Price | Duration | Dump channel |
+| --- | --- | --- | --- |
+| ⭐ Jet Premium | ₹59 via UPI only | 30 days | No |
+| 💾 Permanent Dump Access | ₹250 or 2.75 USDT | Permanent | Yes |
+
+Payments are verified manually. Send the payment screenshot to
+[@rtx5069](https://t.me/rtx5069).
+
 ## Bot commands
 
+- `/subscribe` or `/plans` shows the premium plans and payment buttons.
+- `/mystatus` shows your current plan, remaining free uses and reset time.
 - `/random` sends a random indexed file.
 - `/search <keyword> [keyword] [keyword]` lists indexed filenames containing
   all supplied keywords. Search accepts one to three keywords and displays five
@@ -48,6 +74,27 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - Pending setting inputs expire after 5 minutes and can be aborted with
   `/cancel`.
 
+### Owner commands
+
+Owner-only commands work in any chat. Inside the premium log chat
+(`PREMIUM_INFO_ID`) the bot ignores everything except owner commands that
+explicitly mention the bot username, for example `/user_info@YourBot`. It
+never accepts links or replies to normal messages there.
+
+- `/user_info@YourBot` lists every premium record grouped into permanent,
+  active monthly and expired-awaiting-removal, with name, username, user ID,
+  DC ID, date of joining, current period start, expiry, remaining time and
+  status.
+- `/add USER_ID` grants a 30-day subscription. New or expired users start
+  now; active users get 30 days added to their current expiry.
+- `/adddump USER_ID` grants permanent dump access and unlimited bot use.
+- `/remove USER_ID` deletes a premium record. Expired records are never
+  removed automatically; the log chat asks the owner before removal.
+
+When a monthly subscription ends, benefits stop immediately, the record is
+kept, and the log chat receives one notification with a copy-paste
+`/remove@YourBot USER_ID` command.
+
 ---
 
 <b>Fill this Values in [config.env](config.env)</b>
@@ -58,6 +105,7 @@ This is a Telegram Bot written in Python for Downloading Videos From Terabox.
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
 - `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot uses `/api` to detect files/folders and `/download?url=...` for single-file streams). `Str`
+- `PREMIUM_INFO_ID`: Numeric chat ID (e.g. `-1001234567890`) of the owner-only premium audit chat. It receives premium activation, renewal, removal and expiry events only. Owner commands there must mention the bot username, e.g. `/user_info@YourBot`. Leave empty to disable premium logs. `Int`
 - `TELEGRAM_MEDIA_DELAY`: Optional. Minimum seconds between Telegram media sends/copies, defaults to `1.0`. Folder uploads retry automatically on `FloodWait` instead of marking files as failed. `Float`
 
 ---

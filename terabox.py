@@ -5,11 +5,12 @@ from datetime import datetime, timezone, timedelta
 import os
 import logging
 import math
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle, StopPropagation
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import FloodWait
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 from pyrogram.enums import MessagesFilter
 import time
 import urllib.parse
@@ -104,6 +105,15 @@ else:
 MONGO_URI = os.environ.get('MONGO_URI', '')
 INDEX_CHAT_ID = os.environ.get('INDEX_CHAT_ID', '')
 
+PREMIUM_INFO_RAW = os.environ.get('PREMIUM_INFO_ID', '').strip()
+try:
+    PREMIUM_INFO_ID = int(PREMIUM_INFO_RAW) if PREMIUM_INFO_RAW else None
+except ValueError:
+    PREMIUM_INFO_ID = None
+    logging.error("PREMIUM_INFO_ID must be a numeric chat id such as -1001234567890; premium logs disabled")
+if PREMIUM_INFO_ID is None and PREMIUM_INFO_RAW == '':
+    logging.warning("PREMIUM_INFO_ID is not set; premium audit logging and log-chat commands are disabled")
+
 DOWNLOAD_API = os.environ.get('DOWNLOAD_API', '')
 if len(DOWNLOAD_API) == 0:
     logging.error("DOWNLOAD_API variable is missing! Exiting now")
@@ -118,6 +128,8 @@ if MONGO_URI and INDEX_CHAT_ID:
     videos_col.create_index("message_id", unique=True)
     premium_col = db["premium"]
     premium_col.create_index("user_id", unique=True)
+    usage_col = db["usage_daily"]
+    usage_col.create_index([("user_id", 1), ("date", 1)])
     users_col = db["users"]
     users_col.create_index("user_id", unique=True)
     logger.info("MongoDB connected")
@@ -126,6 +138,7 @@ else:
     db = None
     videos_col = None
     premium_col = None
+    usage_col = None
     users_col = None
     INDEX_CHAT_ID = None
 
@@ -145,6 +158,11 @@ user_index = None
 
 user_cooldowns = {}
 COOLDOWN_SECONDS = 90
+
+FREE_DAILY_TERABOX = 10
+FREE_DAILY_RANDOM = 10
+FREE_DAILY_SEARCH = 10
+SUBSCRIPTION_DAYS = 30
 
 # Telegram can temporarily rate-limit rapid folder uploads. Keep media sends
 # sequential across jobs, leave a short gap between them, and retry the same
@@ -198,18 +216,68 @@ DUMP_QR_FILES = {
 }
 
 DUMP_OFFER_CAPTION = (
-    "💾 Permanent Dump Channel Access\n\n"
-    "Buy permanent access to the whole dump channel.\n\n"
-    "• Binance: 1.5 USDT only\n"
-    "• UPI: ₹200 only\n\n"
+    "💾 Permanent Dump Access — ₹250 / 2.75 USDT\n\n"
+    "One payment unlocks:\n"
+    "• Permanent access to the whole dump channel\n"
+    "• Unlimited TeraBox downloads\n"
+    "• Folder downloads\n"
+    "• Unlimited /random and /search\n\n"
     "Choose your payment method below. After paying, send the payment "
     "screenshot to @rtx5069 for verification."
 )
 
 DUMP_METHOD_LABELS = {
-    "binance": "Binance • 1.5 USDT",
-    "upi": "UPI • ₹200"
+    "binance": "Binance • 2.75 USDT",
+    "upi": "UPI • ₹250"
 }
+
+MONTHLY_CAPTION = (
+    "⭐ Jet Premium — 1 Month\n\n"
+    "₹59 via UPI only\n\n"
+    "For 30 days you get:\n"
+    "• Unlimited TeraBox downloads\n"
+    "• Folder downloads\n"
+    "• Unlimited /random and /search\n\n"
+    "This plan does not include the dump channel.\n"
+    "After paying, send the payment screenshot to @rtx5069 for verification."
+)
+
+PLANS_CAPTION = (
+    "⭐ Jet Premium Plans\n\n"
+    "Free tier:\n"
+    "• 10 TeraBox files per day\n"
+    "• 10 /random uses per day\n"
+    "• 10 /search uses per day\n"
+    "• Folder downloads locked\n\n"
+    "Unlock everything with either plan:\n\n"
+    "💾 Permanent Dump Access — ₹250 / 2.75 USDT\n"
+    "• Permanent dump channel access\n"
+    "• Unlimited downloads, folders, /random and /search\n\n"
+    "⭐ 1 Month Subscription — ₹59 UPI only\n"
+    "• 30 days of unlimited downloads, folders, /random and /search\n"
+    "• Does not include the dump channel\n\n"
+    "Pick a plan below. After paying, send the screenshot to @rtx5069."
+)
+
+
+def build_upgrade_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            "💾 Permanent — ₹250 / 2.75 USDT",
+            callback_data="plans:dump"
+        )],
+        [InlineKeyboardButton(
+            "⭐ 1 Month — ₹59 UPI",
+            callback_data="plans:sub"
+        )]
+    ])
+
+
+def build_plan_back_keyboard():
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("← Back to plans", callback_data="plans:menu")
+    ]])
+
 
 def build_dump_offer_media():
     return InputMediaPhoto(
@@ -305,10 +373,273 @@ def parse_size(size_str):
     except:
         return 0
 
-def is_premium(user_id):
-    if db is None:
+def utcnow():
+    return datetime.now(timezone.utc)
+
+
+def to_utc(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def ist_today():
+    return datetime.now(IST).strftime("%Y-%m-%d")
+
+
+def format_ist(value):
+    dt = to_utc(value)
+    if dt is None:
+        return "N/A"
+    return dt.astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
+
+
+def time_until_reset():
+    now = datetime.now(IST)
+    tomorrow = (now + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    total_minutes = max(0, int((tomorrow - now).total_seconds() // 60))
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours}h {minutes}m"
+
+
+def format_remaining(expires_at):
+    expiry = to_utc(expires_at)
+    if expiry is None:
+        return "Never"
+    delta = expiry - utcnow()
+    total_minutes = int(delta.total_seconds() // 60)
+    if total_minutes <= 0:
+        return "Expired"
+    days, rem_minutes = divmod(total_minutes, 1440)
+    hours, minutes = divmod(rem_minutes, 60)
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+def get_premium_record(user_id):
+    if premium_col is None:
+        return None
+    try:
+        return premium_col.find_one({"user_id": user_id})
+    except Exception as e:
+        logger.warning(f"Could not load premium record for {user_id}: {e}")
+        return None
+
+
+def record_is_permanent(record):
+    if not record:
         return False
-    return premium_col.find_one({"user_id": user_id}) is not None
+    return record.get("plan") == "dump_permanent" or record.get("expires_at") is None
+
+
+def premium_state(user_id):
+    record = get_premium_record(user_id)
+    if not record:
+        return {
+            "record": None, "active": False, "permanent": False,
+            "plan": "free", "expires_at": None,
+        }
+    permanent = record_is_permanent(record)
+    expires_at = to_utc(record.get("expires_at"))
+    active = permanent or (expires_at is not None and expires_at > utcnow())
+    return {
+        "record": record,
+        "active": active,
+        "permanent": permanent,
+        "plan": "dump_permanent" if permanent else (record.get("plan") or "bot_monthly"),
+        "expires_at": expires_at,
+    }
+
+
+def is_premium(user_id):
+    return premium_state(user_id)["active"]
+
+
+def has_folder_access(user_id):
+    return user_id == OWNER_ID or premium_state(user_id)["active"]
+
+
+def get_user_usage(user_id, day=None):
+    day = day or ist_today()
+    result = {"terabox": 0, "random": 0, "search": 0}
+    if usage_col is None:
+        return result
+    try:
+        doc = usage_col.find_one({"_id": f"{user_id}:{day}"})
+        if doc:
+            for kind in result:
+                result[kind] = int(doc.get(kind, 0))
+    except Exception as e:
+        logger.warning(f"Could not load usage for {user_id}: {e}")
+    return result
+
+
+def reserve_daily_usage(user_id, kind, limit):
+    """Atomically reserve one daily use. Returns (ok, ist_date)."""
+    day = ist_today()
+    if usage_col is None:
+        return None, day
+    key = f"{user_id}:{day}"
+    try:
+        try:
+            usage_col.update_one(
+                {"_id": key},
+                {"$setOnInsert": {
+                    "user_id": user_id,
+                    "date": day,
+                    "terabox": 0,
+                    "random": 0,
+                    "search": 0,
+                }},
+                upsert=True,
+            )
+        except DuplicateKeyError:
+            pass
+        result = usage_col.update_one(
+            {"_id": key, kind: {"$lt": limit}},
+            {"$inc": {kind: 1}},
+        )
+        return result.modified_count == 1, day
+    except Exception as e:
+        logger.error(f"Could not reserve {kind} usage for {user_id}: {e}")
+        return None, day
+
+
+def refund_daily_usage(user_id, kind, day):
+    if usage_col is None or not day:
+        return
+    try:
+        usage_col.update_one(
+            {"_id": f"{user_id}:{day}", kind: {"$gt": 0}},
+            {"$inc": {kind: -1}},
+        )
+    except Exception as e:
+        logger.warning(f"Could not refund {kind} usage for {user_id}: {e}")
+
+
+def remaining_daily_usage(user_id):
+    used = get_user_usage(user_id)
+    return {
+        "terabox": max(0, FREE_DAILY_TERABOX - used["terabox"]),
+        "random": max(0, FREE_DAILY_RANDOM - used["random"]),
+        "search": max(0, FREE_DAILY_SEARCH - used["search"]),
+        "used": used,
+    }
+
+
+def daily_limit_text(user_id, kind):
+    key = {
+        "terabox": "limit_terabox",
+        "random": "limit_random",
+        "search": "limit_search",
+    }[kind]
+    limit = {
+        "terabox": FREE_DAILY_TERABOX,
+        "random": FREE_DAILY_RANDOM,
+        "search": FREE_DAILY_SEARCH,
+    }[kind]
+    return t(user_id, key, limit=limit, reset=time_until_reset())
+
+
+async def send_daily_limit(client, message, user_id, kind):
+    await client.send_message(
+        message.chat.id,
+        daily_limit_text(user_id, kind),
+        reply_markup=build_upgrade_keyboard(),
+        parse_mode=None,
+    )
+
+
+async def send_quota_note(client, message, user_id, kind):
+    remaining = remaining_daily_usage(user_id)[kind]
+    note = await client.send_message(
+        message.chat.id,
+        t(user_id, "quota_left", remaining=remaining, reset=time_until_reset())
+    )
+    asyncio.create_task(delayed_delete(note, 30))
+
+
+def user_snapshot_from_record(record):
+    snapshot = (record or {}).get("user_snapshot") or {}
+    return {
+        "name": snapshot.get("name") or "Unknown",
+        "username": snapshot.get("username"),
+        "dc_id": snapshot.get("dc_id"),
+    }
+
+
+async def fetch_user_snapshot(client, user_id):
+    try:
+        user = await client.get_users(user_id)
+        return {
+            "name": user.first_name or "Unknown",
+            "username": user.username,
+            "dc_id": getattr(user, "dc_id", None),
+        }
+    except Exception as e:
+        logger.warning(f"Could not resolve user {user_id}: {e}")
+        return None
+
+
+async def send_premium_log(client, text):
+    if PREMIUM_INFO_ID is None:
+        return False
+    try:
+        await client.send_message(
+            PREMIUM_INFO_ID, text, parse_mode="html",
+            disable_web_page_preview=True,
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"Could not send premium log message: {e}")
+        return False
+
+
+async def send_long_html(client, chat_id, text, chunk_size=3800):
+    lines = text.splitlines()
+    chunk = []
+    length = 0
+    for line in lines:
+        if length + len(line) + 1 > chunk_size and chunk:
+            await client.send_message(
+                chat_id, "\n".join(chunk), parse_mode="html",
+                disable_web_page_preview=True,
+            )
+            chunk = []
+            length = 0
+        chunk.append(line)
+        length += len(line) + 1
+    if chunk:
+        await client.send_message(
+            chat_id, "\n".join(chunk), parse_mode="html",
+            disable_web_page_preview=True,
+        )
+
+
+def parse_addressed_command(text, bot_username):
+    """Return (command, args) only for /command@ThisBot."""
+    parts = (text or "").split()
+    if not parts or not bot_username:
+        return None
+    token = parts[0]
+    if not token.startswith("/") or "@" not in token:
+        return None
+    command, _, target = token[1:].partition("@")
+    if target.lower() != bot_username.lower():
+        return None
+    return command.lower(), parts[1:]
 
 async def delayed_delete(msg, delay):
     await asyncio.sleep(delay)
@@ -737,9 +1068,18 @@ async def start_command(client: Client, message: Message):
         url="https://github.com/Hrishi2861/Terabox-Downloader-Bot"
     )
     user_mention = message.from_user.mention
-    reply_markup = InlineKeyboardMarkup([[join_button, developer_button], [repo69]])
+    plans_button = InlineKeyboardButton(
+        "⭐ Plans / Subscribe", callback_data="plans:menu"
+    )
+    reply_markup = InlineKeyboardMarkup([
+        [join_button, developer_button],
+        [repo69],
+        [plans_button],
+    ])
     final_msg = (
         t(uid, "welcome", mention=user_mention)
+        + "\n\n"
+        + t(uid, "welcome_plans")
         + "\n\n"
         + t(uid, "welcome_settings")
     )
@@ -1071,6 +1411,12 @@ async def user_settings_callback(client: Client, callback_query):
         return
 
     if action == "folder":
+        if not has_folder_access(uid):
+            await callback_query.answer(
+                "Folder downloads are a premium feature. Use /subscribe to unlock.",
+                show_alert=True
+            )
+            return
         await callback_query.answer()
         try:
             await callback_query.message.edit_text(
@@ -1087,6 +1433,12 @@ async def user_settings_callback(client: Client, callback_query):
         return
 
     if action == "folderset":
+        if not has_folder_access(uid):
+            await callback_query.answer(
+                "Folder downloads are a premium feature. Use /subscribe to unlock.",
+                show_alert=True
+            )
+            return
         mode = parts[3] if len(parts) == 4 else ""
         if mode not in ("zip", "single"):
             await callback_query.answer("Invalid folder mode.", show_alert=True)
@@ -1335,21 +1687,47 @@ async def random_video(client: Client, message: Message):
     if videos_col is None:
         await message.reply_text(t(message.from_user.id, "mongo_missing"))
         return
+
+    user_id = message.from_user.id
+    privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
+    reserved_day = None
+
     pipeline = [{"$sample": {"size": 1}}]
     result = list(videos_col.aggregate(pipeline))
     if not result:
-        await message.reply_text(t(message.from_user.id, "no_videos"))
+        await message.reply_text(t(user_id, "no_videos"))
         return
+
+    if not privileged:
+        reserved, reserved_day = reserve_daily_usage(
+            user_id, "random", FREE_DAILY_RANDOM
+        )
+        if reserved is None:
+            await message.reply_text(t(user_id, "mongo_missing"))
+            return
+        if not reserved:
+            await send_daily_limit(client, message, user_id, "random")
+            return
+
     doc = result[0]
-    user_msg = await client.copy_message(message.chat.id, doc["chat_id"], doc["message_id"], caption="")
+    try:
+        user_msg = await client.copy_message(message.chat.id, doc["chat_id"], doc["message_id"], caption="")
+    except Exception as e:
+        logger.error(f"Random delivery failed for {user_id}: {e}")
+        if reserved_day:
+            refund_daily_usage(user_id, "random", reserved_day)
+        await message.reply_text(t(user_id, "search_send_failed"))
+        return
 
     warn = await client.send_message(
         message.chat.id,
-        t(message.from_user.id, "file_deleted_warning")
+        t(user_id, "file_deleted_warning")
     )
     asyncio.create_task(delayed_delete(user_msg, 600))
     asyncio.create_task(delayed_delete(warn, 600))
     await message.delete()
+    if reserved_day:
+        await send_quota_note(client, message, user_id, "random")
 
 @app.on_message(filters.command("search"))
 async def search_files(client: Client, message: Message):
@@ -1375,6 +1753,20 @@ async def search_files(client: Client, message: Message):
         await message.reply_text(t(message.from_user.id, "search_no_results"))
         return
 
+    user_id = message.from_user.id
+    privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
+    reserved_day = None
+    if not privileged:
+        reserved, reserved_day = reserve_daily_usage(
+            user_id, "search", FREE_DAILY_SEARCH
+        )
+        if reserved is None:
+            await message.reply_text(t(user_id, "mongo_missing"))
+            return
+        if not reserved:
+            await send_daily_limit(client, message, user_id, "search")
+            return
+
     token = secrets.token_urlsafe(6)
     while token in search_sessions:
         token = secrets.token_urlsafe(6)
@@ -1385,18 +1777,29 @@ async def search_files(client: Client, message: Message):
         "message": None
     }
 
-    search_message = await message.reply_text(
-        t(message.from_user.id, "search_header",
-          keywords=" ".join(keywords), count=total),
-        reply_markup=build_search_keyboard(token, results, page, total_pages),
-        parse_mode=None
-    )
+    try:
+        search_message = await message.reply_text(
+            t(message.from_user.id, "search_header",
+              keywords=" ".join(keywords), count=total),
+            reply_markup=build_search_keyboard(token, results, page, total_pages),
+            parse_mode=None
+        )
+    except Exception as e:
+        logger.error(f"Search menu failed for {user_id}: {e}")
+        search_sessions.pop(token, None)
+        if reserved_day:
+            refund_daily_usage(user_id, "search", reserved_day)
+        await message.reply_text(t(user_id, "search_unavailable"))
+        return
+
     search_sessions[token]["message"] = search_message
     asyncio.create_task(expire_search_session(token))
     try:
         await message.delete()
     except Exception as e:
         logger.warning(f"Could not delete search command message: {e}")
+    if reserved_day:
+        await send_quota_note(client, message, user_id, "search")
 
 @app.on_callback_query(filters.regex(r"^search:"))
 async def search_callback(client: Client, callback_query):
@@ -1556,85 +1959,568 @@ async def refresh_index(client: Client, message: Message):
     await index_all_videos()
     await message.reply_text("Index refreshed.")
 
-@app.on_message(filters.command("add"))
-async def add_premium(client: Client, message: Message):
-    if message.from_user.id != OWNER_ID:
+def _snapshot_or_record(client_snapshot, record):
+    if client_snapshot:
+        return client_snapshot
+    fallback = user_snapshot_from_record(record)
+    return fallback
+
+
+async def _notify_access_user(client, target_id, text):
+    try:
+        await client.send_message(target_id, text, parse_mode=None)
+    except Exception as e:
+        logger.info(f"Could not notify user {target_id}: {e}")
+
+
+def _access_audit_text(title, target_id, snapshot, plan, expires_at, actor_id):
+    username = snapshot.get("username")
+    username_text = f"@{escape(username)}" if username else "N/A"
+    return (
+        f"{title}\n\n"
+        f"User: <b>{escape(str(snapshot.get('name') or 'Unknown'))}</b>\n"
+        f"Username: {username_text}\n"
+        f"User ID: <code>{target_id}</code>\n"
+        f"Plan: {plan}\n"
+        f"Expires: {format_ist(expires_at) if expires_at else 'Never'}\n"
+        f"Action by: <code>{actor_id}</code>\n"
+        f"Time: {format_ist(utcnow())}"
+    )
+
+
+async def grant_monthly_subscription(client, target_id, actor_id):
+    state = premium_state(target_id)
+    if state["permanent"]:
+        return "permanent", state["record"]
+
+    now = utcnow()
+    record = state["record"]
+    snapshot = _snapshot_or_record(
+        await fetch_user_snapshot(client, target_id), record
+    )
+
+    if record:
+        first_joined = (
+            record.get("first_joined_at")
+            or record.get("added_at")
+            or now
+        )
+        old_expiry = to_utc(record.get("expires_at"))
+        if old_expiry and old_expiry > now:
+            expires_at = old_expiry + timedelta(days=SUBSCRIPTION_DAYS)
+            event = "renewed"
+        else:
+            expires_at = now + timedelta(days=SUBSCRIPTION_DAYS)
+            event = "reactivated"
+    else:
+        first_joined = now
+        expires_at = now + timedelta(days=SUBSCRIPTION_DAYS)
+        event = "activated"
+
+    premium_col.update_one(
+        {"user_id": target_id},
+        {"$set": {
+            "user_id": target_id,
+            "plan": "bot_monthly",
+            "first_joined_at": first_joined,
+            "period_started_at": now,
+            "expires_at": expires_at,
+            "added_at": first_joined,
+            "added_by": actor_id,
+            "updated_at": now,
+            "expiry_notified_at": None,
+            "user_snapshot": snapshot,
+        }},
+        upsert=True,
+    )
+    return event, premium_col.find_one({"user_id": target_id})
+
+
+async def grant_dump_access(client, target_id, actor_id):
+    state = premium_state(target_id)
+    if state["permanent"]:
+        return "already_permanent", state["record"]
+
+    now = utcnow()
+    record = state["record"]
+    snapshot = _snapshot_or_record(
+        await fetch_user_snapshot(client, target_id), record
+    )
+    first_joined = (
+        (record or {}).get("first_joined_at")
+        or (record or {}).get("added_at")
+        or now
+    )
+
+    premium_col.update_one(
+        {"user_id": target_id},
+        {"$set": {
+            "user_id": target_id,
+            "plan": "dump_permanent",
+            "first_joined_at": first_joined,
+            "period_started_at": now,
+            "expires_at": None,
+            "added_at": first_joined,
+            "added_by": actor_id,
+            "updated_at": now,
+            "expiry_notified_at": None,
+            "user_snapshot": snapshot,
+        }},
+        upsert=True,
+    )
+    return "granted", premium_col.find_one({"user_id": target_id})
+
+
+def _require_owner(message):
+    return message.from_user is not None and message.from_user.id == OWNER_ID
+
+
+async def handle_add_subscription(client, message, args):
+    if not _require_owner(message):
         return
     if db is None:
         await message.reply_text("MongoDB not configured.")
         return
-    if len(message.command) < 2:
-        await message.reply_text("Usage: /add user_id")
+    if not args:
+        await message.reply_text("Usage: /add USER_ID")
         return
     try:
-        target_id = int(message.command[1])
-    except:
+        target_id = int(args[0])
+    except ValueError:
         await message.reply_text("Invalid user ID.")
         return
+
+    event, record = await grant_monthly_subscription(client, target_id, OWNER_ID)
+    if event == "permanent":
+        await message.reply_text("This user already has permanent dump access.")
+        return
+
+    expires = format_ist(record.get("expires_at"))
+    snapshot = _snapshot_or_record(None, record)
+    labels = {
+        "activated": "Subscription activated",
+        "renewed": "Subscription renewed",
+        "reactivated": "Subscription reactivated",
+    }
+    await message.reply_text(
+        f"✅ {labels.get(event, 'Subscription updated')} for "
+        f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>\n"
+        f"Expires: {expires}",
+        parse_mode="html",
+    )
+    await _notify_access_user(
+        client, target_id,
+        "⭐ Jet Premium activated!\n\n"
+        f"Your unlimited downloads, folders, /random and /search are active until {expires}.",
+    )
+    await send_premium_log(
+        client,
+        _access_audit_text(
+            f"🟢 <b>{labels.get(event, 'Subscription updated')}</b>",
+            target_id, snapshot, "Monthly subscription (30 days)",
+            record.get("expires_at"), OWNER_ID,
+        ),
+    )
+
+
+async def handle_add_dump(client, message, args):
+    if not _require_owner(message):
+        return
+    if db is None:
+        await message.reply_text("MongoDB not configured.")
+        return
+    if not args:
+        await message.reply_text("Usage: /adddump USER_ID")
+        return
     try:
-        user = await client.get_users(target_id)
-    except:
-        await message.reply_text("User not found.")
+        target_id = int(args[0])
+    except ValueError:
+        await message.reply_text("Invalid user ID.")
         return
-    if premium_col.find_one({"user_id": target_id}):
-        await message.reply_text("User is already premium.")
+
+    event, record = await grant_dump_access(client, target_id, OWNER_ID)
+    if event == "already_permanent":
+        await message.reply_text("This user already has permanent dump access.")
         return
-    premium_col.insert_one({"user_id": target_id, "added_by": OWNER_ID, "added_at": datetime.now(timezone.utc)})
-    await message.reply_text(f"<a href='tg://user?id={target_id}'>{user.first_name}</a> added successfully ✅🚀")
+
+    snapshot = _snapshot_or_record(None, record)
+    await message.reply_text(
+        f"💾 Permanent dump access granted to "
+        f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>.",
+        parse_mode="html",
+    )
+    await _notify_access_user(
+        client, target_id,
+        "💾 Permanent dump access activated!\n\n"
+        "You now have permanent access to the dump channel, unlimited TeraBox "
+        "downloads, folder downloads, /random and /search.",
+    )
+    await send_premium_log(
+        client,
+        _access_audit_text(
+            "💾 <b>Permanent dump access granted</b>",
+            target_id, snapshot, "Permanent dump access", None, OWNER_ID,
+        ),
+    )
+
+
+async def handle_remove_premium(client, message, args):
+    if not _require_owner(message):
+        return
+    if db is None:
+        await message.reply_text("MongoDB not configured.")
+        return
+    if not args:
+        await message.reply_text("Usage: /remove USER_ID")
+        return
+    try:
+        target_id = int(args[0])
+    except ValueError:
+        await message.reply_text("Invalid user ID.")
+        return
+
+    record = get_premium_record(target_id)
+    if not record:
+        await message.reply_text("No premium record found for this user.")
+        return
+
+    snapshot = _snapshot_or_record(None, record)
+    premium_col.delete_one({"user_id": target_id})
+    await message.reply_text(
+        f"🗑 Premium record removed for "
+        f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>.",
+        parse_mode="html",
+    )
+    await _notify_access_user(
+        client, target_id,
+        "Your Jet Premium access has been removed. Send /subscribe to see the plans.",
+    )
+    await send_premium_log(
+        client,
+        _access_audit_text(
+            "🔴 <b>Premium record removed</b>",
+            target_id, snapshot,
+            "Permanent" if record_is_permanent(record) else "Monthly subscription",
+            record.get("expires_at"), OWNER_ID,
+        ),
+    )
+
+
+def _user_info_entry(target_id, snapshot, record, status):
+    username = snapshot.get("username")
+    username_text = f"@{escape(username)}" if username else "N/A"
+    dc_id = snapshot.get("dc_id")
+    first_joined = (
+        record.get("first_joined_at")
+        or record.get("added_at")
+    )
+    period_start = record.get("period_started_at") or record.get("added_at")
+    permanent = record_is_permanent(record)
+    plan = "Permanent dump access" if permanent else "Monthly subscription"
+    expires = "Never" if permanent else format_ist(record.get("expires_at"))
+    remaining = "Never" if permanent else format_remaining(record.get("expires_at"))
+    return (
+        f"👤 <b>{escape(str(snapshot.get('name') or 'Unknown'))}</b>\n"
+        f"🔗 {username_text}\n"
+        f"🆔 <code>{target_id}</code>\n"
+        f"📡 DC: {dc_id if dc_id else 'N/A'}\n"
+        f"💎 Plan: {plan}\n"
+        f"📅 DOJ: {format_ist(first_joined)}\n"
+        f"🔁 Period start: {format_ist(period_start)}\n"
+        f"⏳ Expires: {expires}\n"
+        f"⌛ Remaining: {remaining}\n"
+        f"📌 Status: {status}"
+    )
+
+
+async def handle_user_info(client, message, args=None):
+    if not _require_owner(message):
+        return
+    if db is None:
+        await message.reply_text("MongoDB not configured.")
+        return
+
+    records = list(premium_col.find({}))
+    if not records:
+        await message.reply_text("No premium users yet.")
+        return
+
+    permanent = []
+    active = []
+    expired = []
+    now = utcnow()
+
+    for record in records:
+        target_id = record.get("user_id")
+        if target_id is None:
+            continue
+        snapshot = user_snapshot_from_record(record)
+        if not snapshot.get("name") or snapshot.get("name") == "Unknown":
+            snapshot = _snapshot_or_record(
+                await fetch_user_snapshot(client, target_id), record
+            )
+        if record_is_permanent(record):
+            permanent.append((target_id, snapshot, record))
+            continue
+        expiry = to_utc(record.get("expires_at"))
+        if expiry and expiry > now:
+            active.append((target_id, snapshot, record))
+        else:
+            expired.append((target_id, snapshot, record))
+
+    active.sort(key=lambda item: to_utc(item[2].get("expires_at")) or now)
+    expired.sort(key=lambda item: to_utc(item[2].get("expires_at")) or now)
+
+    bot_username = client.me.username if client.me else ""
+    remove_hint = (
+        f"\nTo remove: /remove@{bot_username} USER_ID"
+        if bot_username else ""
+    )
+
+    text = (
+        "📊 <b>Premium Information</b>\n\n"
+        f"Permanent: {len(permanent)} | Active: {len(active)} | Expired: {len(expired)}\n"
+        f"Updated: {format_ist(now)}"
+    )
+
+    if permanent:
+        text += "\n\n💾 <b>Permanent dump users</b>"
+        for target_id, snapshot, record in permanent:
+            text += "\n\n" + _user_info_entry(
+                target_id, snapshot, record, "Permanent"
+            )
+
+    if active:
+        text += "\n\n⭐ <b>Active monthly subscriptions</b>"
+        for target_id, snapshot, record in active:
+            text += "\n\n" + _user_info_entry(
+                target_id, snapshot, record, "Active"
+            )
+
+    if expired:
+        text += "\n\n⌛ <b>Expired records — not removed</b>"
+        for target_id, snapshot, record in expired:
+            text += "\n\n" + _user_info_entry(
+                target_id, snapshot, record, "Expired — awaiting removal"
+            )
+        text += f"\n\n{remove_hint}" if remove_hint else ""
+
+    await send_long_html(client, message.chat.id, text)
+
+
+async def handle_my_status(client, message):
+    if not message.from_user:
+        return
+    user_id = message.from_user.id
+    if user_id == OWNER_ID:
+        await message.reply_text(
+            "👑 Owner access: unlimited downloads, folders, /random and /search."
+        )
+        return
+
+    state = premium_state(user_id)
+    limits = remaining_daily_usage(user_id)
+
+    if state["permanent"]:
+        plan_line = "💾 Permanent dump access"
+        expiry_line = "Expires: Never"
+        access_line = "Downloads: Unlimited | Folders: Yes | /random: Unlimited | /search: Unlimited"
+    elif state["active"]:
+        plan_line = "⭐ Monthly subscription"
+        expiry_line = f"Expires: {format_ist(state['expires_at'])}"
+        access_line = "Downloads: Unlimited | Folders: Yes | /random: Unlimited | /search: Unlimited"
+    else:
+        plan_line = "🆓 Free tier"
+        expiry_line = "Expires: N/A"
+        access_line = (
+            f"Downloads: {limits['terabox']}/{FREE_DAILY_TERABOX} left | "
+            f"/random: {limits['random']}/{FREE_DAILY_RANDOM} left | "
+            f"/search: {limits['search']}/{FREE_DAILY_SEARCH} left | "
+            "Folders: Locked"
+        )
+
+    await message.reply_text(
+        "👤 <b>Your Jet Premium status</b>\n\n"
+        f"Plan: {plan_line}\n"
+        f"{expiry_line}\n"
+        f"{access_line}\n\n"
+        f"Daily limits reset in {time_until_reset()} (12:00 AM IST).\n"
+        "Use /subscribe to unlock unlimited access.",
+        parse_mode="html",
+        reply_markup=build_upgrade_keyboard() if not state["active"] else None,
+    )
+
+
+@app.on_message(filters.command("add"))
+async def add_premium(client: Client, message: Message):
+    await handle_add_subscription(client, message, message.command[1:])
+
+
+@app.on_message(filters.command("adddump"))
+async def add_dump(client: Client, message: Message):
+    await handle_add_dump(client, message, message.command[1:])
+
 
 @app.on_message(filters.command("remove"))
 async def remove_premium(client: Client, message: Message):
-    if message.from_user.id != OWNER_ID:
-        return
-    if db is None:
-        await message.reply_text("MongoDB not configured.")
-        return
-    if len(message.command) < 2:
-        await message.reply_text("Usage: /remove user_id")
-        return
-    try:
-        target_id = int(message.command[1])
-    except:
-        await message.reply_text("Invalid user ID.")
-        return
-    try:
-        user = await client.get_users(target_id)
-        name = user.first_name
-    except:
-        name = str(target_id)
-    result = premium_col.delete_one({"user_id": target_id})
-    if result.deleted_count == 0:
-        await message.reply_text("User is not in premium list.")
-        return
-    await message.reply_text(f"<a href='tg://user?id={target_id}'>{name}</a> deleted successfully ✅🚀")
+    await handle_remove_premium(client, message, message.command[1:])
+
 
 @app.on_message(filters.command("list"))
 async def list_premium(client: Client, message: Message):
-    if message.from_user.id != OWNER_ID:
+    # Owner-only alias kept for convenience outside the log chat.
+    if message.chat.id == PREMIUM_INFO_ID:
         return
-    if db is None:
-        await message.reply_text("MongoDB not configured.")
+    await handle_user_info(client, message)
+
+
+@app.on_message(filters.command(["subscribe", "plans"]))
+async def subscribe_command(client: Client, message: Message):
+    await message.reply_text(
+        PLANS_CAPTION,
+        reply_markup=build_upgrade_keyboard(),
+        parse_mode=None,
+        disable_web_page_preview=True,
+    )
+
+
+@app.on_message(filters.command("mystatus"))
+async def my_status_command(client: Client, message: Message):
+    await handle_my_status(client, message)
+
+
+@app.on_callback_query(filters.regex(r"^plans:"))
+async def plans_callback(client: Client, callback_query):
+    action = callback_query.data.split(":", 1)[1]
+    chat_id = callback_query.message.chat.id
+
+    if action == "dump":
+        if not os.path.exists(DUMP_DONATION_IMAGE):
+            await callback_query.answer("Payment information is unavailable.", show_alert=True)
+            return
+        await callback_query.answer("Opening permanent plan...")
+        await client.send_photo(
+            chat_id, DUMP_DONATION_IMAGE,
+            caption=DUMP_OFFER_CAPTION,
+            reply_markup=build_dump_payment_keyboard(callback_query.from_user.id),
+            parse_mode=None,
+        )
         return
-    premium_users = list(premium_col.find())
-    if not premium_users:
-        await message.reply_text("No premium users.")
+
+    if action == "sub":
+        upi_path = DUMP_QR_FILES["upi"]
+        if not os.path.exists(upi_path):
+            await callback_query.answer("Payment information is unavailable.", show_alert=True)
+            return
+        await callback_query.answer("Opening monthly plan...")
+        await client.send_photo(
+            chat_id, upi_path,
+            caption=MONTHLY_CAPTION,
+            reply_markup=build_plan_back_keyboard(),
+            parse_mode=None,
+        )
         return
-    lines = ["**Premium Users:**\n"]
-    for doc in premium_users:
-        uid = doc["user_id"]
-        date = doc.get("added_at", "")
-        if isinstance(date, datetime):
-            if date.tzinfo is None:
-                date = date.replace(tzinfo=timezone.utc)
-            date = date.astimezone(IST).strftime("%Y-%m-%d %I:%M %p")
+
+    if action == "menu":
+        await callback_query.answer()
+        await client.send_message(
+            chat_id, PLANS_CAPTION,
+            reply_markup=build_upgrade_keyboard(),
+            parse_mode=None,
+            disable_web_page_preview=True,
+        )
+        return
+
+    await callback_query.answer("Unknown plan.", show_alert=True)
+
+async def premium_expiry_monitor():
+    await asyncio.sleep(20)
+    while True:
         try:
-            u = await client.get_users(uid)
-            name = u.first_name
-        except:
-            name = str(uid)
-        lines.append(f"• <a href='tg://user?id={uid}'>{name}</a> (ID: tg://user?id={uid} ) - {date}")
-    lines.append(f"\nTotal: {len(premium_users)} users")
-    await message.reply_text("\n".join(lines))
+            if premium_col is not None:
+                now = utcnow()
+                expired = list(premium_col.find({
+                    "plan": "bot_monthly",
+                    "expires_at": {"$lte": now},
+                    "expiry_notified_at": None,
+                }))
+                for record in expired:
+                    target_id = record.get("user_id")
+                    if target_id is None:
+                        continue
+                    snapshot = _snapshot_or_record(None, record)
+                    bot_username = app.me.username if app.me else ""
+                    remove_command = (
+                        f"/remove@{bot_username} {target_id}"
+                        if bot_username else f"/remove {target_id}"
+                    )
+                    text = (
+                        "🔴 <b>Subscription ended</b>\n\n"
+                        f"<code>{target_id}</code> "
+                        f"({escape(str(snapshot.get('name') or 'Unknown'))}) "
+                        "sub has just ended, Should i remove them?\n\n"
+                        f"Expired: {format_ist(record.get('expires_at'))}\n"
+                        "The record was <b>not</b> removed.\n"
+                        f"<code>{escape(remove_command)}</code>"
+                    )
+                    if await send_premium_log(app, text):
+                        premium_col.update_one(
+                            {"_id": record["_id"]},
+                            {"$set": {"expiry_notified_at": now}},
+                        )
+                        logger.info(f"Premium expiry notified for {target_id}")
+        except Exception as e:
+            logger.exception(f"Premium expiry monitor failed: {e}")
+        await asyncio.sleep(300)
+
+
+def _premium_chat_filter(_, __, update):
+    chat = getattr(update, "chat", None)
+    if chat is None:
+        chat = getattr(getattr(update, "message", None), "chat", None)
+    return (
+        PREMIUM_INFO_ID is not None
+        and chat is not None
+        and chat.id == PREMIUM_INFO_ID
+    )
+
+
+premium_chat_filter = filters.create(_premium_chat_filter)
+
+
+if PREMIUM_INFO_ID is not None:
+    @app.on_message(premium_chat_filter, group=-1)
+    async def premium_info_guard(client, message):
+        try:
+            if (
+                message.from_user
+                and message.from_user.id == OWNER_ID
+                and message.text
+            ):
+                parsed = parse_addressed_command(
+                    message.text,
+                    client.me.username if client.me else None,
+                )
+                if parsed:
+                    command, args = parsed
+                    if command == "user_info":
+                        await handle_user_info(client, message, args)
+                    elif command == "add":
+                        await handle_add_subscription(client, message, args)
+                    elif command == "adddump":
+                        await handle_add_dump(client, message, args)
+                    elif command == "remove":
+                        await handle_remove_premium(client, message, args)
+                    elif command == "list":
+                        await handle_user_info(client, message, args)
+        except Exception as e:
+            logger.exception(f"Premium chat guard failed: {e}")
+        raise StopPropagation
+
+    @app.on_callback_query(premium_chat_filter, group=-1)
+    async def premium_info_callback_guard(client, callback_query):
+        raise StopPropagation
+
 
 async def update_status_message(status_message, text):
     try:
@@ -2726,6 +3612,20 @@ async def handle_message(client: Client, message: Message):
         return
 
     if info.get("isdir") is True:
+        privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
+        if not privileged:
+            try:
+                await status_message.delete()
+                await message.delete()
+            except Exception:
+                pass
+            await client.send_message(
+                message.chat.id,
+                t(user_id, "folder_premium"),
+                reply_markup=build_upgrade_keyboard(),
+                parse_mode=None,
+            )
+            return
         mode = get_user_setting(user_id, "folder_mode", DEFAULT_FOLDER_MODE)
         try:
             if mode == "zip":
@@ -2736,6 +3636,28 @@ async def handle_message(client: Client, message: Message):
             logger.exception(f"Folder processing failed: {e}")
             await message.reply_text(t(user_id, "download_failed"))
     else:
+        privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
+        reserved_day = None
+        if not privileged:
+            reserved, reserved_day = reserve_daily_usage(
+                user_id, "terabox", FREE_DAILY_TERABOX
+            )
+            if reserved is None:
+                try:
+                    await status_message.delete()
+                except Exception:
+                    pass
+                await message.reply_text(t(user_id, "mongo_missing"))
+                return
+            if not reserved:
+                try:
+                    await status_message.delete()
+                    await message.delete()
+                except Exception:
+                    pass
+                await send_daily_limit(client, message, user_id, "terabox")
+                return
+
         try:
             result = await process_single_url(
                 client, message, user_id,
@@ -2747,7 +3669,11 @@ async def handle_message(client: Client, message: Message):
             logger.exception(f"Single-file processing failed: {e}")
             result = {"ok": False}
         if not result.get("ok"):
+            if reserved_day:
+                refund_daily_usage(user_id, "terabox", reserved_day)
             await message.reply_text(t(user_id, "download_failed"))
+        elif reserved_day:
+            await send_quota_note(client, message, user_id, "terabox")
 
     try:
         await status_message.delete()
@@ -2791,6 +3717,14 @@ async def start_indexing():
                 asyncio.create_task(index_new_videos())
             asyncio.create_task(periodic_reindex())
 
+async def run_bot():
+    await app.start()
+    logger.info("Bot client started!")
+    asyncio.create_task(premium_expiry_monitor())
+    await idle()
+    await app.stop()
+
+
 if __name__ == "__main__":
     keep_alive()
 
@@ -2801,5 +3735,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(start_indexing())
 
-    logger.info("Bot client started!")
-    app.run()
+    loop.run_until_complete(run_bot())

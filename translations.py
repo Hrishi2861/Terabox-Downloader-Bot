@@ -54,20 +54,20 @@ TRANSLATIONS["en"] = {
     "dump_caption": (
         "💾 Permanent Dump Channel Access\n\n"
         "Buy permanent access to the whole dump channel.\n\n"
-        "• Binance: 1.5 USDT only\n"
-        "• UPI: ₹200 only\n\n"
+        "• Binance: 2.75 USDT only\n"
+        "• UPI: ₹250 only\n\n"
         "Choose your payment method below. After paying, send the payment "
         "screenshot to @rtx5069 for verification."
     ),
     "dump_qr_binance": (
         "Binance Payment\n\n"
-        "Amount: 1.5 USDT only\n\n"
+        "Amount: 2.75 USDT only\n\n"
         "Scan this QR using the Binance app. After paying, send the "
         "payment screenshot to @rtx5069 for verification."
     ),
     "dump_qr_upi": (
         "UPI Payment\n\n"
-        "Amount: ₹200 only\n\n"
+        "Amount: ₹250 only\n\n"
         "Scan this QR using any UPI app. After paying, send the payment "
         "screenshot to @rtx5069 for verification."
     ),
@@ -107,20 +107,20 @@ TRANSLATIONS["hi"] = {
     "dump_caption": (
         "💾 स्थायी डंप चैनल एक्सेस\n\n"
         "पूरे डंप चैनल की स्थायी एक्सेस खरीदें।\n\n"
-        "• Binance: केवल 1.5 USDT\n"
-        "• UPI: केवल ₹200\n\n"
+        "• Binance: केवल 2.75 USDT\n"
+        "• UPI: केवल ₹250\n\n"
         "नीचे अपनी भुगतान विधि चुनें। भुगतान के बाद, सत्यापन के लिए भुगतान "
         "स्क्रीनशॉट @rtx5069 को भेजें।"
     ),
     "dump_qr_binance": (
         "Binance भुगतान\n\n"
-        "राशि: केवल 1.5 USDT\n\n"
+        "राशि: केवल 2.75 USDT\n\n"
         "Binance ऐप से यह QR स्कैन करें। भुगतान के बाद, सत्यापन के लिए भुगतान "
         "स्क्रीनशॉट @rtx5069 को भेजें।"
     ),
     "dump_qr_upi": (
         "UPI भुगतान\n\n"
-        "राशि: केवल ₹200\n\n"
+        "राशि: केवल ₹250\n\n"
         "किसी भी UPI ऐप से यह QR स्कैन करें। भुगतान के बाद, सत्यापन के लिए भुगतान "
         "स्क्रीनशॉट @rtx5069 को भेजें।"
     ),
@@ -160,20 +160,20 @@ TRANSLATIONS["mr"] = {
     "dump_caption": (
         "💾 कायमस्वरूपी डंप चॅनल प्रवेश\n\n"
         "संपूर्ण डंप चॅनलचा कायमस्वरूपी प्रवेश खरेदी करा.\n\n"
-        "• Binance: फक्त 1.5 USDT\n"
-        "• UPI: फक्त ₹200\n\n"
+        "• Binance: फक्त 2.75 USDT\n"
+        "• UPI: फक्त ₹250\n\n"
         "खाली तुमची पेमेंट पद्धत निवडा. पेमेंटनंतर, पडताळणीसाठी पेमेंट "
         "स्क्रीनशॉट @rtx5069 यांना पाठवा."
     ),
     "dump_qr_binance": (
         "Binance पेमेंट\n\n"
-        "रक्कम: फक्त 1.5 USDT\n\n"
+        "रक्कम: फक्त 2.75 USDT\n\n"
         "Binance अॅपने हा QR स्कॅन करा. पेमेंटनंतर, पडताळणीसाठी पेमेंट "
         "स्क्रीनशॉट @rtx5069 यांना पाठवा."
     ),
     "dump_qr_upi": (
         "UPI पेमेंट\n\n"
-        "रक्कम: फक्त ₹200\n\n"
+        "रक्कम: फक्त ₹250\n\n"
         "कोणत्याही UPI अॅपने हा QR स्कॅन करा. पेमेंटनंतर, पडताळणीसाठी पेमेंट "
         "स्क्रीनशॉट @rtx5069 यांना पाठवा."
     ),
@@ -213,20 +213,20 @@ TRANSLATIONS["bn"] = {
     "dump_caption": (
         "💾 স্থায়ী ডাম্প চ্যানেল অ্যাক্সেস\n\n"
         "সম্পূর্ণ ডাম্প চ্যানেলের স্থায়ী অ্যাক্সেস কিনুন।\n\n"
-        "• Binance: মাত্র 1.5 USDT\n"
-        "• UPI: মাত্র ₹200\n\n"
+        "• Binance: মাত্র 2.75 USDT\n"
+        "• UPI: মাত্র ₹250\n\n"
         "নিচে আপনার পেমেন্ট পদ্ধতি নির্বাচন করুন। পেমেন্টের পরে, যাচাইয়ের "
         "জন্য পেমেন্ট স্ক্রিনশট @rtx5069 কে পাঠান।"
     ),
     "dump_qr_binance": (
         "Binance পেমেন্ট\n\n"
-        "পরিমাণ: মাত্র 1.5 USDT\n\n"
+        "পরিমাণ: মাত্র 2.75 USDT\n\n"
         "Binance অ্যাপ দিয়ে এই QR স্ক্যান করুন। পেমেন্টের পরে, যাচাইয়ের "
         "জন্য পেমেন্ট স্ক্রিনশট @rtx5069 কে পাঠান।"
     ),
     "dump_qr_upi": (
         "UPI পেমেন্ট\n\n"
-        "পরিমাণ: মাত্র ₹200\n\n"
+        "পরিমাণ: মাত্র ₹250\n\n"
         "যেকোনো UPI অ্যাপ দিয়ে এই QR স্ক্যান করুন। পেমেন্টের পরে, যাচাইয়ের "
         "জন্য পেমেন্ট স্ক্রিনশট @rtx5069 কে পাঠান।"
     ),
@@ -266,20 +266,20 @@ TRANSLATIONS["ta"] = {
     "dump_caption": (
         "💾 நிரந்தர டம்ப் சேனல் அணுகல்\n\n"
         "முழு டம்ப் சேனலின் நிரந்தர அணுகலை வாங்குங்கள்.\n\n"
-        "• Binance: 1.5 USDT மட்டும்\n"
-        "• UPI: ₹200 மட்டும்\n\n"
+        "• Binance: 2.75 USDT மட்டும்\n"
+        "• UPI: ₹250 மட்டும்\n\n"
         "கீழே உங்கள் பணம் செலுத்தும் முறையைத் தேர்ந்தெடுங்கள். பணம் "
         "செலுத்திய பிறகு, சரிபார்ப்புக்கு திரைப்படத்தை @rtx5069 க்கு அனுப்பவும்."
     ),
     "dump_qr_binance": (
         "Binance பணப்பரிமாற்றம்\n\n"
-        "தொகை: 1.5 USDT மட்டும்\n\n"
+        "தொகை: 2.75 USDT மட்டும்\n\n"
         "Binance ஆப்பின் மூலம் இந்த QR ஐ ஸ்கேன் செய்யுங்கள். பணம் "
         "செலுத்திய பிறகு, சரிபார்ப்புக்கு ஸ்கிரீன்ஷாட்டை @rtx5069 க்கு அனுப்பவும்."
     ),
     "dump_qr_upi": (
         "UPI பணப்பரிமாற்றம்\n\n"
-        "தொகை: ₹200 மட்டும்\n\n"
+        "தொகை: ₹250 மட்டும்\n\n"
         "எந்த UPI ஆப்பின் மூலமும் இந்த QR ஐ ஸ்கேன் செய்யுங்கள். பணம் "
         "செலுத்திய பிறகு, சரிபார்ப்புக்கு ஸ்கிரீன்ஷாட்டை @rtx5069 க்கு அனுப்பவும்."
     ),
@@ -319,20 +319,20 @@ TRANSLATIONS["te"] = {
     "dump_caption": (
         "💾 శాశ్వత డంప్ ఛానల్ యాక్సెస్\n\n"
         "మొత్తం డంప్ ఛానల్‌కు శాశ్వత యాక్సెస్ కొనండి.\n\n"
-        "• Binance: 1.5 USDT మాత్రమే\n"
-        "• UPI: ₹200 మాత్రమే\n\n"
+        "• Binance: 2.75 USDT మాత్రమే\n"
+        "• UPI: ₹250 మాత్రమే\n\n"
         "దిగువ మీ చెల్లింపు విధానాన్ని ఎంచుకోండి. చెల్లింపు తర్వాత, "
         "ధృవీకరణ కోసం స్క్రీన్‌షాట్‌ను @rtx5069 కు పంపండి."
     ),
     "dump_qr_binance": (
         "Binance చెల్లింపు\n\n"
-        "మొత్తం: 1.5 USDT మాత్రమే\n\n"
+        "మొత్తం: 2.75 USDT మాత్రమే\n\n"
         "Binance యాప్‌తో ఈ QR ను స్కాన్ చేయండి. చెల్లింపు తర్వాత, "
         "ధృవీకరణ కోసం స్క్రీన్‌షాట్‌ను @rtx5069 కు పంపండి."
     ),
     "dump_qr_upi": (
         "UPI చెల్లింపు\n\n"
-        "మొత్తం: ₹200 మాత్రమే\n\n"
+        "మొత్తం: ₹250 మాత్రమే\n\n"
         "ఏ UPI యాప్‌తోనైనా ఈ QR ను స్కాన్ చేయండి. చెల్లింపు తర్వాత, "
         "ధృవీకరణ కోసం స్క్రీన్‌షాట్‌ను @rtx5069 కు పంపండి."
     ),
@@ -372,20 +372,20 @@ TRANSLATIONS["kn"] = {
     "dump_caption": (
         "💾 ಶಾಶ್ವತ ಡಂಪ್ ಚಾನೆಲ್ ಪ್ರವೇಶ\n\n"
         "ಇಡೀ ಡಂಪ್ ಚಾನೆಲ್‌ನ ಶಾಶ್ವತ ಪ್ರವೇಶವನ್ನು ಖರೀದಿಸಿ.\n\n"
-        "• Binance: 1.5 USDT ಮಾತ್ರ\n"
-        "• UPI: ₹200 ಮಾತ್ರ\n\n"
+        "• Binance: 2.75 USDT ಮಾತ್ರ\n"
+        "• UPI: ₹250 ಮಾತ್ರ\n\n"
         "ಕೆಳಗೆ ನಿಮ್ಮ ಪಾವತಿ ವಿಧಾನವನ್ನು ಆಯ್ಕೆಮಾಡಿ. ಪಾವತಿಸಿದ ನಂತರ, "
         "ಪರಿಶೀಲನೆಗಾಗಿ ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು @rtx5069 ಗೆ ಕಳುಹಿಸಿ."
     ),
     "dump_qr_binance": (
         "Binance ಪಾವತಿ\n\n"
-        "ಮೊತ್ತ: 1.5 USDT ಮಾತ್ರ\n\n"
+        "ಮೊತ್ತ: 2.75 USDT ಮಾತ್ರ\n\n"
         "Binance ಆಪ್‌ನಿಂದ ಈ QR ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ. ಪಾವತಿಸಿದ ನಂತರ, "
         "ಪರಿಶೀಲನೆಗಾಗಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು @rtx5069 ಗೆ ಕಳುಹಿಸಿ."
     ),
     "dump_qr_upi": (
         "UPI ಪಾವತಿ\n\n"
-        "ಮೊತ್ತ: ₹200 ಮಾತ್ರ\n\n"
+        "ಮೊತ್ತ: ₹250 ಮಾತ್ರ\n\n"
         "ಯಾವುದೇ UPI ಆಪ್‌ನಿಂದ ಈ QR ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ. ಪಾವತಿಸಿದ ನಂತರ, "
         "ಪರಿಶೀಲನೆಗಾಗಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು @rtx5069 ಗೆ ಕಳುಹಿಸಿ."
     ),
@@ -425,20 +425,20 @@ TRANSLATIONS["ml"] = {
     "dump_caption": (
         "💾 സ്ഥിരകാല ഡംപ് ചാനൽ ആക്‌സസ്സ്\n\n"
         "മുഴുവൻ ഡംപ് ചാനലിന്റെയും സ്ഥിരകാല ആക്‌സസ്സ് വാങ്ങുക.\n\n"
-        "• Binance: 1.5 USDT മാത്രം\n"
-        "• UPI: ₹200 മാത്രം\n\n"
+        "• Binance: 2.75 USDT മാത്രം\n"
+        "• UPI: ₹250 മാത്രം\n\n"
         "താഴെ നിങ്ങളുടെ പണമടയ്ക്കൽ രീതി തിരഞ്ഞെടുക്കുക. പണമടച്ച ശേഷം, "
         "സ്ഥിരീകരണത്തിനായി സ്ക്രീൻഷോട്ട് @rtx5069 ന് അയയ്ക്കുക."
     ),
     "dump_qr_binance": (
         "Binance പണമടയ്ക്കൽ\n\n"
-        "തുക: 1.5 USDT മാത്രം\n\n"
+        "തുക: 2.75 USDT മാത്രം\n\n"
         "Binance ആപ്പ് ഉപയോഗിച്ച് ഈ QR സ്കാൻ ചെയ്യുക. പണമടച്ച ശേഷം, "
         "സ്ഥിരീകരണത്തിനായി സ്ക്രീൻഷോട്ട് @rtx5069 ന് അയയ്ക്കുക."
     ),
     "dump_qr_upi": (
         "UPI പണമടയ്ക്കൽ\n\n"
-        "തുക: ₹200 മാത്രം\n\n"
+        "തുക: ₹250 മാത്രം\n\n"
         "ഏതെങ്കിലും UPI ആപ്പ് ഉപയോഗിച്ച് ഈ QR സ്കാൻ ചെയ്യുക. പണമടച്ച ശേഷം, "
         "സ്ഥിരീകരണത്തിനായി സ്ക്രീൻഷോട്ട് @rtx5069 ന് അയയ്ക്കുക."
     ),
@@ -478,20 +478,20 @@ TRANSLATIONS["ur"] = {
     "dump_caption": (
         "💾 مستقل ڈمپ چینل تک رسائی\n\n"
         "پورے ڈمپ چینل تک مستقل رسائی حاصل کریں۔\n\n"
-        "• Binance: صرف 1.5 USDT\n"
-        "• UPI: صرف ₹200\n\n"
+        "• Binance: صرف 2.75 USDT\n"
+        "• UPI: صرف ₹250\n\n"
         "نیچے اپنی ادائیگی کا طریقہ منتخب کریں۔ ادائیگی کے بعد، تصدیق کے "
         "لیے ادائیگی کا اسکرین شاٹ @rtx5069 کو بھیجیں۔"
     ),
     "dump_qr_binance": (
         "Binance ادائیگی\n\n"
-        "رقم: صرف 1.5 USDT\n\n"
+        "رقم: صرف 2.75 USDT\n\n"
         "Binance ایپ سے یہ QR سکین کریں۔ ادائیگی کے بعد، تصدیق کے لیے "
         "اسکرین شاٹ @rtx5069 کو بھیجیں۔"
     ),
     "dump_qr_upi": (
         "UPI ادائیگی\n\n"
-        "رقم: صرف ₹200\n\n"
+        "رقم: صرف ₹250\n\n"
         "کسی بھی UPI ایپ سے یہ QR سکین کریں۔ ادائیگی کے بعد، تصدیق کے لیے "
         "اسکرین شاٹ @rtx5069 کو بھیجیں۔"
     ),
@@ -531,20 +531,20 @@ TRANSLATIONS["pa"] = {
     "dump_caption": (
         "💾 ਸਥਾਈ ਡੰਪ ਚੈਨਲ ਪਹੁੰਚ\n\n"
         "ਪੂਰੇ ਡੰਪ ਚੈਨਲ ਦੀ ਸਥਾਈ ਪਹੁੰਚ ਖਰੀਦੋ।\n\n"
-        "• Binance: ਸਿਰਫ਼ 1.5 USDT\n"
-        "• UPI: ਸਿਰਫ਼ ₹200\n\n"
+        "• Binance: ਸਿਰਫ਼ 2.75 USDT\n"
+        "• UPI: ਸਿਰਫ਼ ₹250\n\n"
         "ਹੇਠਾਂ ਆਪਣਾ ਭੁਗਤਾਨ ਤਰੀਕਾ ਚੁਣੋ। ਭੁਗਤਾਨ ਤੋਂ ਬਾਅਦ, ਤਸਦੀਕ ਲਈ "
         "ਭੁਗਤਾਨ ਸਕਰੀਨਸ਼ਾਟ @rtx5069 ਨੂੰ ਭੇਜੋ।"
     ),
     "dump_qr_binance": (
         "Binance ਭੁਗਤਾਨ\n\n"
-        "ਰਕਮ: ਸਿਰਫ਼ 1.5 USDT\n\n"
+        "ਰਕਮ: ਸਿਰਫ਼ 2.75 USDT\n\n"
         "Binance ਐਪ ਨਾਲ ਇਹ QR ਸਕੈਨ ਕਰੋ। ਭੁਗਤਾਨ ਤੋਂ ਬਾਅਦ, ਤਸਦੀਕ ਲਈ "
         "ਸਕਰੀਨਸ਼ਾਟ @rtx5069 ਨੂੰ ਭੇਜੋ।"
     ),
     "dump_qr_upi": (
         "UPI ਭੁਗਤਾਨ\n\n"
-        "ਰਕਮ: ਸਿਰਫ਼ ₹200\n\n"
+        "ਰਕਮ: ਸਿਰਫ਼ ₹250\n\n"
         "ਕਿਸੇ ਵੀ UPI ਐਪ ਨਾਲ ਇਹ QR ਸਕੈਨ ਕਰੋ। ਭੁਗਤਾਨ ਤੋਂ ਬਾਅਦ, ਤਸਦੀਕ ਲਈ "
         "ਸਕਰੀਨਸ਼ਾਟ @rtx5069 ਨੂੰ ਭੇਜੋ।"
     ),
@@ -584,20 +584,20 @@ TRANSLATIONS["gu"] = {
     "dump_caption": (
         "💾 કાયમી ડમ્પ ચેનલ ઍક્સેસ\n\n"
         "આખા ડમ્પ ચેનલની કાયમી ઍક્સેસ ખરીદો.\n\n"
-        "• Binance: ફક્ત 1.5 USDT\n"
-        "• UPI: ફક્ત ₹200\n\n"
+        "• Binance: ફક્ત 2.75 USDT\n"
+        "• UPI: ફક્ત ₹250\n\n"
         "નીચે તમારી ચુકવણી પદ્ધતિ પસંદ કરો. ચુકવણી પછી, ચકાસણી માટે "
         "ચુકવણી સ્ક્રીનશોટ @rtx5069 ને મોકલો."
     ),
     "dump_qr_binance": (
         "Binance ચુકવણી\n\n"
-        "રકમ: ફક્ત 1.5 USDT\n\n"
+        "રકમ: ફક્ત 2.75 USDT\n\n"
         "Binance એપથી આ QR સ્કેન કરો. ચુકવણી પછી, ચકાસણી માટે "
         "સ્ક્રીનશોટ @rtx5069 ને મોકલો."
     ),
     "dump_qr_upi": (
         "UPI ચુકવણી\n\n"
-        "રકમ: ફક્ત ₹200\n\n"
+        "રકમ: ફક્ત ₹250\n\n"
         "કોઈપણ UPI એપથી આ QR સ્કેન કરો. ચુકવણી પછી, ચકાસણી માટે "
         "સ્ક્રીનશોટ @rtx5069 ને મોકલો."
     ),
@@ -637,20 +637,20 @@ TRANSLATIONS["es"] = {
     "dump_caption": (
         "💾 Acceso permanente al canal de descargas\n\n"
         "Compra acceso permanente a todo el canal.\n\n"
-        "• Binance: solo 1.5 USDT\n"
-        "• UPI: solo ₹200\n\n"
+        "• Binance: solo 2.75 USDT\n"
+        "• UPI: solo ₹250\n\n"
         "Elige tu método de pago abajo. Tras pagar, envía la captura del "
         "pago a @rtx5069 para verificarlo."
     ),
     "dump_qr_binance": (
         "Pago con Binance\n\n"
-        "Importe: solo 1.5 USDT\n\n"
+        "Importe: solo 2.75 USDT\n\n"
         "Escanea este código QR con la app de Binance. Tras pagar, envía "
         "la captura a @rtx5069 para verificarlo."
     ),
     "dump_qr_upi": (
         "Pago por UPI\n\n"
-        "Importe: solo ₹200\n\n"
+        "Importe: solo ₹250\n\n"
         "Escanea este código QR con cualquier app de UPI. Tras pagar, "
         "envía la captura a @rtx5069 para verificarlo."
     ),
@@ -690,20 +690,20 @@ TRANSLATIONS["fr"] = {
     "dump_caption": (
         "💾 Accès permanent au canal de stockage\n\n"
         "Achetez un accès permanent à l'ensemble du canal.\n\n"
-        "• Binance : seulement 1,5 USDT\n"
-        "• UPI : seulement 200 ₹\n\n"
+        "• Binance : seulement 2,75 USDT\n"
+        "• UPI : seulement 250 ₹\n\n"
         "Choisissez votre moyen de paiement ci-dessous. Après paiement, "
         "envoyez la capture d'écran à @rtx5069 pour vérification."
     ),
     "dump_qr_binance": (
         "Paiement Binance\n\n"
-        "Montant : seulement 1,5 USDT\n\n"
+        "Montant : seulement 2,75 USDT\n\n"
         "Scannez ce QR avec l'application Binance. Après paiement, envoyez "
         "la capture d'écran à @rtx5069 pour vérification."
     ),
     "dump_qr_upi": (
         "Paiement UPI\n\n"
-        "Montant : seulement 200 ₹\n\n"
+        "Montant : seulement 250 ₹\n\n"
         "Scannez ce QR avec n'importe quelle application UPI. Après "
         "paiement, envoyez la capture d'écran à @rtx5069 pour vérification."
     ),
@@ -743,20 +743,20 @@ TRANSLATIONS["de"] = {
     "dump_caption": (
         "💾 Permanenter Dump-Kanal-Zugang\n\n"
         "Kaufe permanenten Zugang zum gesamten Dump-Kanal.\n\n"
-        "• Binance: nur 1,5 USDT\n"
-        "• UPI: nur 200 ₹\n\n"
+        "• Binance: nur 2,75 USDT\n"
+        "• UPI: nur 250 ₹\n\n"
         "Wähle unten deine Zahlungsmethode. Sende nach der Zahlung den "
         "Zahlungs-Screenshot zur Überprüfung an @rtx5069."
     ),
     "dump_qr_binance": (
         "Binance-Zahlung\n\n"
-        "Betrag: nur 1,5 USDT\n\n"
+        "Betrag: nur 2,75 USDT\n\n"
         "Scanne diesen QR mit der Binance-App. Sende nach der Zahlung den "
         "Screenshot zur Überprüfung an @rtx5069."
     ),
     "dump_qr_upi": (
         "UPI-Zahlung\n\n"
-        "Betrag: nur 200 ₹\n\n"
+        "Betrag: nur 250 ₹\n\n"
         "Scanne diesen QR mit einer beliebigen UPI-App. Sende nach der "
         "Zahlung den Screenshot zur Überprüfung an @rtx5069."
     ),
@@ -1104,20 +1104,20 @@ TRANSLATIONS["it"] = {
     "dump_caption": (
         "💾 Accesso permanente al canale dump\n\n"
         "Acquista l'accesso permanente all'intero canale dump.\n\n"
-        "• Binance: solo 1,5 USDT\n"
-        "• UPI: solo ₹200\n\n"
+        "• Binance: solo 2,75 USDT\n"
+        "• UPI: solo ₹250\n\n"
         "Scegli il metodo di pagamento qui sotto. Dopo il pagamento, invia lo "
         "screenshot a @rtx5069 per la verifica."
     ),
     "dump_qr_binance": (
         "Pagamento Binance\n\n"
-        "Importo: solo 1,5 USDT\n\n"
+        "Importo: solo 2,75 USDT\n\n"
         "Scansiona questo QR con l'app Binance. Dopo il pagamento, invia lo "
         "screenshot a @rtx5069 per la verifica."
     ),
     "dump_qr_upi": (
         "Pagamento UPI\n\n"
-        "Importo: solo ₹200\n\n"
+        "Importo: solo ₹250\n\n"
         "Scansiona questo QR con qualsiasi app UPI. Dopo il pagamento, invia "
         "lo screenshot a @rtx5069 per la verifica."
     ),
@@ -1176,20 +1176,20 @@ TRANSLATIONS["ja"] = {
     "dump_caption": (
         "💾 ダンプチャンネルへの永久アクセス\n\n"
         "ダンプチャンネル全体への永久アクセスを購入できます。\n\n"
-        "• Binance: 1.5 USDT のみ\n"
-        "• UPI: ₹200 のみ\n\n"
+        "• Binance: 2.75 USDT のみ\n"
+        "• UPI: ₹250 のみ\n\n"
         "下から支払い方法を選択してください。支払い後、確認のためスクリーン"
         "ショットを @rtx5069 までお送りください。"
     ),
     "dump_qr_binance": (
         "Binance 支払い\n\n"
-        "金額: 1.5 USDT のみ\n\n"
+        "金額: 2.75 USDT のみ\n\n"
         "Binance アプリでこの QR をスキャンしてください。支払い後、確認の"
         "ためスクリーンショットを @rtx5069 までお送りください。"
     ),
     "dump_qr_upi": (
         "UPI 支払い\n\n"
-        "金額: ₹200 のみ\n\n"
+        "金額: ₹250 のみ\n\n"
         "任意の UPI アプリでこの QR をスキャンしてください。支払い後、確認"
         "のためスクリーンショットを @rtx5069 までお送りください。"
     ),
@@ -1248,20 +1248,20 @@ TRANSLATIONS["ko"] = {
     "dump_caption": (
         "💾 덤프 채널 영구 이용권\n\n"
         "덤프 채널 전체에 대한 영구 이용권을 구매하세요.\n\n"
-        "• Binance: 1.5 USDT만\n"
-        "• UPI: ₹200만\n\n"
+        "• Binance: 2.75 USDT만\n"
+        "• UPI: ₹250만\n\n"
         "아래에서 결제 방법을 선택하세요. 결제 후 확인을 위해 스크린샷을 "
         "@rtx5069로 보내주세요."
     ),
     "dump_qr_binance": (
         "Binance 결제\n\n"
-        "금액: 1.5 USDT만\n\n"
+        "금액: 2.75 USDT만\n\n"
         "Binance 앱으로 이 QR을 스캔하세요. 결제 후 확인을 위해 스크린샷을 "
         "@rtx5069로 보내주세요."
     ),
     "dump_qr_upi": (
         "UPI 결제\n\n"
-        "금액: ₹200만\n\n"
+        "금액: ₹250만\n\n"
         "아무 UPI 앱으로 이 QR을 스캔하세요. 결제 후 확인을 위해 스크린샷을 "
         "@rtx5069로 보내주세요."
     ),
@@ -1320,20 +1320,20 @@ TRANSLATIONS["zh"] = {
     "dump_caption": (
         "💾 永久转储频道访问权限\n\n"
         "购买整个转储频道的永久访问权限。\n\n"
-        "• Binance：仅 1.5 USDT\n"
-        "• UPI：仅 ₹200\n\n"
+        "• Binance：仅 2.75 USDT\n"
+        "• UPI：仅 ₹250\n\n"
         "请在下方选择支付方式。支付后，请将付款截图发送至 @rtx5069 "
         "进行验证。"
     ),
     "dump_qr_binance": (
         "Binance 付款\n\n"
-        "金额：仅 1.5 USDT\n\n"
+        "金额：仅 2.75 USDT\n\n"
         "使用 Binance 应用扫描此二维码。支付后，请将截图发送至 "
         "@rtx5069 进行验证。"
     ),
     "dump_qr_upi": (
         "UPI 付款\n\n"
-        "金额：仅 ₹200\n\n"
+        "金额：仅 ₹250\n\n"
         "使用任意 UPI 应用扫描此二维码。支付后，请将截图发送至 "
         "@rtx5069 进行验证。"
     ),
@@ -1539,6 +1539,156 @@ for _code, _name in ADDITIONAL_LANGUAGES:
 
 LANGUAGES.extend(ADDITIONAL_LANGUAGES)
 LANGUAGE_CODES = {code for code, _name in LANGUAGES}
+
+PREMIUM_TRANSLATIONS = {
+    "en": {
+        "welcome_plans": "🆓 Free tier: 10 downloads, 10 /random and 10 /search per day. Folder downloads are premium.\n⭐ Use /subscribe for unlimited access.",
+        "limit_terabox": "⏳ Daily limit reached — {limit} TeraBox files per day.\n\nResets in {reset} at 12:00 AM IST.\nUpgrade with /subscribe for unlimited downloads.",
+        "limit_random": "⏳ Daily limit reached — {limit} /random uses per day.\n\nResets in {reset} at 12:00 AM IST.\nUpgrade with /subscribe for unlimited use.",
+        "limit_search": "⏳ Daily limit reached — {limit} /search uses per day.\n\nResets in {reset} at 12:00 AM IST.\nUpgrade with /subscribe for unlimited use.",
+        "quota_left": "📊 {remaining} free uses left today. Resets in {reset} at 12:00 AM IST.",
+        "folder_premium": "📁 Folder downloads are a premium feature.\n\nUpgrade with /subscribe to unlock folder downloads, unlimited downloads, /random and /search.",
+    },
+    "hi": {
+        "welcome_plans": "🆓 मुफ़्त सीमा: प्रतिदिन 10 डाउनलोड, 10 /random और 10 /search। फ़ोल्डर डाउनलोड प्रीमियम हैं।\n⭐ असीमित उपयोग के लिए /subscribe करें।",
+        "limit_terabox": "⏳ दैनिक सीमा पूरी — प्रतिदिन {limit} TeraBox फ़ाइलें।\n\n{reset} में 12:00 AM IST पर रीसेट होगी।\nअसीमित डाउनलोड के लिए /subscribe करें।",
+        "limit_random": "⏳ दैनिक सीमा पूरी — प्रतिदिन {limit} /random उपयोग।\n\n{reset} में 12:00 AM IST पर रीसेट होगी।\nअसीमित उपयोग के लिए /subscribe करें।",
+        "limit_search": "⏳ दैनिक सीमा पूरी — प्रतिदिन {limit} /search उपयोग।\n\n{reset} में 12:00 AM IST पर रीसेट होगी।\nअसीमित उपयोग के लिए /subscribe करें।",
+        "quota_left": "📊 आज {remaining} मुफ़्त उपयोग शेष। {reset} में 12:00 AM IST पर रीसेट होगा।",
+        "folder_premium": "📁 फ़ोल्डर डाउनलोड प्रीमियम सुविधा है।\n\nफ़ोल्डर, असीमित डाउनलोड, /random और /search के लिए /subscribe करें।",
+    },
+    "mr": {
+        "welcome_plans": "🆓 मोफत मर्यादा: दररोज 10 डाउनलोड, 10 /random आणि 10 /search. फोल्डर डाउनलोड प्रीमियम आहेत.\n⭐ अमर्यादित वापरासाठी /subscribe करा.",
+        "limit_terabox": "⏳ दैनिक मर्यादा पूर्ण — दररोज {limit} TeraBox फाइली.\n\n{reset} मध्ये 12:00 AM IST ला रीसेट होईल.\nअमर्यादित डाउनलोडसाठी /subscribe करा.",
+        "limit_random": "⏳ दैनिक मर्यादा पूर्ण — दररोज {limit} /random वापर.\n\n{reset} मध्ये 12:00 AM IST ला रीसेट होईल.\nअमर्यादित वापरासाठी /subscribe करा.",
+        "limit_search": "⏳ दैनिक मर्यादा पूर्ण — दररोज {limit} /search वापर.\n\n{reset} मध्ये 12:00 AM IST ला रीसेट होईल.\nअमर्यादित वापरासाठी /subscribe करा.",
+        "quota_left": "📊 आज {remaining} मोफत वापर शिल्लक. {reset} मध्ये 12:00 AM IST ला रीसेट होईल.",
+        "folder_premium": "📁 फोल्डर डाउनलोड प्रीमियम सुविधा आहे.\n\nफोल्डर, अमर्यादित डाउनलोड, /random आणि /search साठी /subscribe करा.",
+    },
+    "bn": {
+        "welcome_plans": "🆓 বিনামূল্যের সীমা: প্রতিদিন 10 ডাউনলোড, 10 /random এবং 10 /search। ফোল্ডার ডাউনলোড প্রিমিয়াম।\n⭐ আনলিমিটেড ব্যবহারের জন্য /subscribe করুন।",
+        "limit_terabox": "⏳ দৈনিক সীমা শেষ — প্রতিদিন {limit} TeraBox ফাইল।\n\n{reset} পরে 12:00 AM IST-এ রিসেট হবে।\nআনলিমিটেড ডাউনলোডের জন্য /subscribe করুন।",
+        "limit_random": "⏳ দৈনিক সীমা শেষ — প্রতিদিন {limit} /random ব্যবহার।\n\n{reset} পরে 12:00 AM IST-এ রিসেট হবে।\nআনলিমিটেড ব্যবহারের জন্য /subscribe করুন।",
+        "limit_search": "⏳ দৈনিক সীমা শেষ — প্রতিদিন {limit} /search ব্যবহার।\n\n{reset} পরে 12:00 AM IST-এ রিসেট হবে।\nআনলিমিটেড ব্যবহারের জন্য /subscribe করুন।",
+        "quota_left": "📊 আজ {remaining}টি বিনামূল্যের ব্যবহার বাকি। {reset} পরে 12:00 AM IST-এ রিসেট হবে।",
+        "folder_premium": "📁 ফোল্ডার ডাউনলোড একটি প্রিমিয়াম সুবিধা।\n\nফোল্ডার, আনলিমিটেড ডাউনলোড, /random এবং /search-এর জন্য /subscribe করুন।",
+    },
+    "ta": {
+        "welcome_plans": "🆓 இலவச வரம்பு: நாளொன்றுக்கு 10 பதிவிறக்கங்கள், 10 /random மற்றும் 10 /search. கோப்புறை பதிவிறக்கம் பிரீமியம்.\n⭐ வரம்பற்ற பயன்பாட்டிற்கு /subscribe செய்யுங்கள்.",
+        "limit_terabox": "⏳ தினசரி வரம்பு முடிந்தது — நாளொன்றுக்கு {limit} TeraBox கோப்புகள்.\n\n{reset} இல் 12:00 AM IST-க்கு மீட்டமைக்கப்படும்.\nவரம்பற்ற பதிவிறக்கத்திற்கு /subscribe செய்யுங்கள்.",
+        "limit_random": "⏳ தினசரி வரம்பு முடிந்தது — நாளொன்றுக்கு {limit} /random பயன்பாடுகள்.\n\n{reset} இல் 12:00 AM IST-க்கு மீட்டமைக்கப்படும்.\nவரம்பற்ற பயன்பாட்டிற்கு /subscribe செய்யுங்கள்.",
+        "limit_search": "⏳ தினசரி வரம்பு முடிந்தது — நாளொன்றுக்கு {limit} /search பயன்பாடுகள்.\n\n{reset} இல் 12:00 AM IST-க்கு மீட்டமைக்கப்படும்.\nவரம்பற்ற பயன்பாட்டிற்கு /subscribe செய்யுங்கள்.",
+        "quota_left": "📊 இன்று {remaining} இலவச பயன்பாடுகள் மீதம். {reset} இல் 12:00 AM IST-க்கு மீட்டமைக்கப்படும்.",
+        "folder_premium": "📁 கோப்புறை பதிவிறக்கம் பிரீமியம் அம்சம்.\n\nகோப்புறை, வரம்பற்ற பதிவிறக்கம், /random மற்றும் /search-க்கு /subscribe செய்யுங்கள்.",
+    },
+    "te": {
+        "welcome_plans": "🆓 ఉచిత పరిమితి: రోజుకు 10 డౌన్‌లోడ్‌లు, 10 /random మరియు 10 /search. ఫోల్డర్ డౌన్‌లోడ్‌లు ప్రీమియం.\n⭐ అపరిమిత వినియోగానికి /subscribe చేయండి.",
+        "limit_terabox": "⏳ రోజువారీ పరిమితి ముగిసింది — రోజుకు {limit} TeraBox ఫైల్‌లు.\n\n{reset} లో 12:00 AM ISTకి రీసెట్ అవుతుంది.\nఅపరిమిత డౌన్‌లోడ్‌లకు /subscribe చేయండి.",
+        "limit_random": "⏳ రోజువారీ పరిమితి ముగిసింది — రోజుకు {limit} /random వినియోగాలు.\n\n{reset} లో 12:00 AM ISTకి రీసెట్ అవుతుంది.\nఅపరిమిత వినియోగానికి /subscribe చేయండి.",
+        "limit_search": "⏳ రోజువారీ పరిమితి ముగిసింది — రోజుకు {limit} /search వినియోగాలు.\n\n{reset} లో 12:00 AM ISTకి రీసెట్ అవుతుంది.\nఅపరిమిత వినియోగానికి /subscribe చేయండి.",
+        "quota_left": "📊 ఈరోజు {remaining} ఉచిత వినియోగాలు మిగిలాయి. {reset} లో 12:00 AM ISTకి రీసెట్ అవుతుంది.",
+        "folder_premium": "📁 ఫోల్డర్ డౌన్‌లోడ్ ప్రీమియం ఫీచర్.\n\nఫోల్డర్, అపరిమిత డౌన్‌లోడ్‌లు, /random మరియు /search కోసం /subscribe చేయండి.",
+    },
+    "kn": {
+        "welcome_plans": "🆓 ಉಚಿತ ಮಿತಿ: ದಿನಕ್ಕೆ 10 ಡೌನ್‌ಲೋಡ್‌ಗಳು, 10 /random ಮತ್ತು 10 /search. ಫೋಲ್ಡರ್ ಡೌನ್‌ಲೋಡ್‌ಗಳು ಪ್ರೀಮಿಯಂ.\n⭐ ಅಪರಿಮಿತ ಬಳಕೆಗೆ /subscribe ಮಾಡಿ.",
+        "limit_terabox": "⏳ ದೈನಂದಿನ ಮಿತಿ ಮುಗಿದಿದೆ — ದಿನಕ್ಕೆ {limit} TeraBox ಫೈಲ್‌ಗಳು.\n\n{reset} ನಲ್ಲಿ 12:00 AM ISTಕ್ಕೆ ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ.\nಅಪರಿಮಿತ ಡೌನ್‌ಲೋಡ್‌ಗಳಿಗೆ /subscribe ಮಾಡಿ.",
+        "limit_random": "⏳ ದೈನಂದಿನ ಮಿತಿ ಮುಗಿದಿದೆ — ದಿನಕ್ಕೆ {limit} /random ಬಳಕೆಗಳು.\n\n{reset} ನಲ್ಲಿ 12:00 AM ISTಕ್ಕೆ ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ.\nಅಪರಿಮಿತ ಬಳಕೆಗೆ /subscribe ಮಾಡಿ.",
+        "limit_search": "⏳ ದೈನಂದಿನ ಮಿತಿ ಮುಗಿದಿದೆ — ದಿನಕ್ಕೆ {limit} /search ಬಳಕೆಗಳು.\n\n{reset} ನಲ್ಲಿ 12:00 AM ISTಕ್ಕೆ ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ.\nಅಪರಿಮಿತ ಬಳಕೆಗೆ /subscribe ಮಾಡಿ.",
+        "quota_left": "📊 ಇಂದು {remaining} ಉಚಿತ ಬಳಕೆಗಳು ಉಳಿದಿವೆ. {reset} ನಲ್ಲಿ 12:00 AM ISTಕ್ಕೆ ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ.",
+        "folder_premium": "📁 ಫೋಲ್ಡರ್ ಡೌನ್‌ಲೋಡ್ ಪ್ರೀಮಿಯಂ ವೈಶಿಷ್ಟ್ಯ.\n\nಫೋಲ್ಡರ್, ಅಪರಿಮಿತ ಡೌನ್‌ಲೋಡ್‌ಗಳು, /random ಮತ್ತು /search ಗಾಗಿ /subscribe ಮಾಡಿ.",
+    },
+    "ml": {
+        "welcome_plans": "🆓 സൗജന്യ പരിധി: ദിവസം 10 ഡൗൺലോഡുകൾ, 10 /random, 10 /search. ഫോൾഡർ ഡൗൺലോഡുകൾ പ്രീമിയമാണ്.\n⭐ പരിധിയില്ലാത്ത ഉപയോഗത്തിന് /subscribe ചെയ്യുക.",
+        "limit_terabox": "⏳ ദൈനംദിന പരിധി തീർന്നു — ദിവസം {limit} TeraBox ഫയലുകൾ.\n\n{reset} കഴിഞ്ഞ് 12:00 AM IST-ന് പുനഃസജ്ജമാകും.\nപരിധിയില്ലാത്ത ഡൗൺലോഡുകൾക്ക് /subscribe ചെയ്യുക.",
+        "limit_random": "⏳ ദൈനംദിന പരിധി തീർന്നു — ദിവസം {limit} /random ഉപയോഗങ്ങൾ.\n\n{reset} കഴിഞ്ഞ് 12:00 AM IST-ന് പുനഃസജ്ജമാകും.\nപരിധിയില്ലാത്ത ഉപയോഗത്തിന് /subscribe ചെയ്യുക.",
+        "limit_search": "⏳ ദൈനംദിന പരിധി തീർന്നു — ദിവസം {limit} /search ഉപയോഗങ്ങൾ.\n\n{reset} കഴിഞ്ഞ് 12:00 AM IST-ന് പുനഃസജ്ജമാകും.\nപരിധിയില്ലാത്ത ഉപയോഗത്തിന് /subscribe ചെയ്യുക.",
+        "quota_left": "📊 ഇന്ന് {remaining} സൗജന്യ ഉപയോഗങ്ങൾ ബാക്കി. {reset} കഴിഞ്ഞ് 12:00 AM IST-ന് പുനഃസജ്ജമാകും.",
+        "folder_premium": "📁 ഫോൾഡർ ഡൗൺലോഡ് ഒരു പ്രീമിയം സവിശേഷതയാണ്.\n\nഫോൾഡർ, പരിധിയില്ലാത്ത ഡൗൺലോഡുകൾ, /random, /search എന്നിവയ്ക്ക് /subscribe ചെയ്യുക.",
+    },
+    "ur": {
+        "welcome_plans": "🆓 مفت حد: روزانہ 10 ڈاؤن لوڈز، 10 /random اور 10 /search۔ فولڈر ڈاؤن لوڈز پریمیم ہیں۔\n⭐ لامحدود استعمال کے لیے /subscribe کریں۔",
+        "limit_terabox": "⏳ روزانہ کی حد پوری — روزانہ {limit} TeraBox فائلیں۔\n\n{reset} میں 12:00 AM IST پر ری سیٹ ہوگی۔\nلامحدود ڈاؤن لوڈز کے لیے /subscribe کریں۔",
+        "limit_random": "⏳ روزانہ کی حد پوری — روزانہ {limit} /random استعمال۔\n\n{reset} میں 12:00 AM IST پر ری سیٹ ہوگی۔\nلامحدود استعمال کے لیے /subscribe کریں۔",
+        "limit_search": "⏳ روزانہ کی حد پوری — روزانہ {limit} /search استعمال۔\n\n{reset} میں 12:00 AM IST پر ری سیٹ ہوگی۔\nلامحدود استعمال کے لیے /subscribe کریں۔",
+        "quota_left": "📊 آج {remaining} مفت استعمال باقی ہیں۔ {reset} میں 12:00 AM IST پر ری سیٹ ہوں گے۔",
+        "folder_premium": "📁 فولڈر ڈاؤن لوڈ ایک پریمیم فیچر ہے۔\n\nفولڈر، لامحدود ڈاؤن لوڈز، /random اور /search کے لیے /subscribe کریں۔",
+    },
+    "pa": {
+        "welcome_plans": "🆓 ਮੁਫ਼ਤ ਸੀਮਾ: ਰੋਜ਼ਾਨਾ 10 ਡਾਊਨਲੋਡ, 10 /random ਅਤੇ 10 /search। ਫੋਲਡਰ ਡਾਊਨਲੋਡ ਪ੍ਰੀਮੀਅਮ ਹਨ।\n⭐ ਅਸੀਮਤ ਵਰਤੋਂ ਲਈ /subscribe ਕਰੋ।",
+        "limit_terabox": "⏳ ਰੋਜ਼ਾਨਾ ਸੀਮਾ ਪੂਰੀ — ਰੋਜ਼ਾਨਾ {limit} TeraBox ਫਾਈਲਾਂ।\n\n{reset} ਵਿੱਚ 12:00 AM IST 'ਤੇ ਰੀਸੈਟ ਹੋਵੇਗੀ।\nਅਸੀਮਤ ਡਾਊਨਲੋਡ ਲਈ /subscribe ਕਰੋ।",
+        "limit_random": "⏳ ਰੋਜ਼ਾਨਾ ਸੀਮਾ ਪੂਰੀ — ਰੋਜ਼ਾਨਾ {limit} /random ਵਰਤੋਂ।\n\n{reset} ਵਿੱਚ 12:00 AM IST 'ਤੇ ਰੀਸੈਟ ਹੋਵੇਗੀ।\nਅਸੀਮਤ ਵਰਤੋਂ ਲਈ /subscribe ਕਰੋ।",
+        "limit_search": "⏳ ਰੋਜ਼ਾਨਾ ਸੀਮਾ ਪੂਰੀ — ਰੋਜ਼ਾਨਾ {limit} /search ਵਰਤੋਂ।\n\n{reset} ਵਿੱਚ 12:00 AM IST 'ਤੇ ਰੀਸੈਟ ਹੋਵੇਗੀ।\nਅਸੀਮਤ ਵਰਤੋਂ ਲਈ /subscribe ਕਰੋ।",
+        "quota_left": "📊 ਅੱਜ {remaining} ਮੁਫ਼ਤ ਵਰਤੋਂ ਬਾਕੀ। {reset} ਵਿੱਚ 12:00 AM IST 'ਤੇ ਰੀਸੈਟ ਹੋਵੇਗੀ।",
+        "folder_premium": "📁 ਫੋਲਡਰ ਡਾਊਨਲੋਡ ਇੱਕ ਪ੍ਰੀਮੀਅਮ ਸੁਵਿਧਾ ਹੈ।\n\nਫੋਲਡਰ, ਅਸੀਮਤ ਡਾਊਨਲੋਡ, /random ਅਤੇ /search ਲਈ /subscribe ਕਰੋ।",
+    },
+    "gu": {
+        "welcome_plans": "🆓 મફત મર્યાદા: દરરોજ 10 ડાઉનલોડ, 10 /random અને 10 /search. ફોલ્ડર ડાઉનલોડ પ્રીમિયમ છે.\n⭐ અમર્યાદિત વપરાશ માટે /subscribe કરો.",
+        "limit_terabox": "⏳ દૈનિક મર્યાદા પૂર્ણ — દરરોજ {limit} TeraBox ફાઇલો.\n\n{reset} માં 12:00 AM IST પર રીસેટ થશે.\nઅમર્યાદિત ડાઉનલોડ માટે /subscribe કરો.",
+        "limit_random": "⏳ દૈનિક મર્યાદા પૂર્ણ — દરરોજ {limit} /random વપરાશ.\n\n{reset} માં 12:00 AM IST પર રીસેટ થશે.\nઅમર્યાદિત વપરાશ માટે /subscribe કરો.",
+        "limit_search": "⏳ દૈનિક મર્યાદા પૂર્ણ — દરરોજ {limit} /search વપરાશ.\n\n{reset} માં 12:00 AM IST પર રીસેટ થશે.\nઅમર્યાદિત વપરાશ માટે /subscribe કરો.",
+        "quota_left": "📊 આજે {remaining} મફત વપરાશ બાકી. {reset} માં 12:00 AM IST પર રીસેટ થશે.",
+        "folder_premium": "📁 ફોલ્ડર ડાઉનલોડ એ પ્રીમિયમ સુવિધા છે.\n\nફોલ્ડર, અમર્યાદિત ડાઉનલોડ, /random અને /search માટે /subscribe કરો.",
+    },
+    "es": {
+        "welcome_plans": "🆓 Plan gratis: 10 descargas, 10 /random y 10 /search al día. Las descargas de carpetas son premium.\n⭐ Usa /subscribe para acceso ilimitado.",
+        "limit_terabox": "⏳ Límite diario alcanzado — {limit} archivos de TeraBox al día.\n\nSe reinicia en {reset} a las 12:00 AM IST.\nUsa /subscribe para descargas ilimitadas.",
+        "limit_random": "⏳ Límite diario alcanzado — {limit} usos de /random al día.\n\nSe reinicia en {reset} a las 12:00 AM IST.\nUsa /subscribe para uso ilimitado.",
+        "limit_search": "⏳ Límite diario alcanzado — {limit} usos de /search al día.\n\nSe reinicia en {reset} a las 12:00 AM IST.\nUsa /subscribe para uso ilimitado.",
+        "quota_left": "📊 Te quedan {remaining} usos gratis hoy. Se reinicia en {reset} a las 12:00 AM IST.",
+        "folder_premium": "📁 Las descargas de carpetas son una función premium.\n\nUsa /subscribe para desbloquear carpetas, descargas ilimitadas, /random y /search.",
+    },
+    "fr": {
+        "welcome_plans": "🆓 Offre gratuite : 10 téléchargements, 10 /random et 10 /search par jour. Les dossiers sont premium.\n⭐ Utilisez /subscribe pour un accès illimité.",
+        "limit_terabox": "⏳ Limite quotidienne atteinte — {limit} fichiers TeraBox par jour.\n\nRéinitialisation dans {reset} à 12:00 AM IST.\nUtilisez /subscribe pour des téléchargements illimités.",
+        "limit_random": "⏳ Limite quotidienne atteinte — {limit} utilisations de /random par jour.\n\nRéinitialisation dans {reset} à 12:00 AM IST.\nUtilisez /subscribe pour un usage illimité.",
+        "limit_search": "⏳ Limite quotidienne atteinte — {limit} utilisations de /search par jour.\n\nRéinitialisation dans {reset} à 12:00 AM IST.\nUtilisez /subscribe pour un usage illimité.",
+        "quota_left": "📊 Il vous reste {remaining} utilisations gratuites aujourd'hui. Réinitialisation dans {reset} à 12:00 AM IST.",
+        "folder_premium": "📁 Les téléchargements de dossiers sont une fonction premium.\n\nUtilisez /subscribe pour débloquer les dossiers, les téléchargements illimités, /random et /search.",
+    },
+    "de": {
+        "welcome_plans": "🆓 Kostenlos: 10 Downloads, 10 /random und 10 /search pro Tag. Ordner-Downloads sind Premium.\n⭐ Nutze /subscribe für unbegrenzten Zugriff.",
+        "limit_terabox": "⏳ Tageslimit erreicht — {limit} TeraBox-Dateien pro Tag.\n\nZurücksetzung in {reset} um 12:00 AM IST.\nNutze /subscribe für unbegrenzte Downloads.",
+        "limit_random": "⏳ Tageslimit erreicht — {limit} /random-Nutzungen pro Tag.\n\nZurücksetzung in {reset} um 12:00 AM IST.\nNutze /subscribe für unbegrenzte Nutzung.",
+        "limit_search": "⏳ Tageslimit erreicht — {limit} /search-Nutzungen pro Tag.\n\nZurücksetzung in {reset} um 12:00 AM IST.\nNutze /subscribe für unbegrenzte Nutzung.",
+        "quota_left": "📊 Heute noch {remaining} kostenlose Nutzungen. Zurücksetzung in {reset} um 12:00 AM IST.",
+        "folder_premium": "📁 Ordner-Downloads sind eine Premium-Funktion.\n\nNutze /subscribe für Ordner, unbegrenzte Downloads, /random und /search.",
+    },
+    "it": {
+        "welcome_plans": "🆓 Piano gratuito: 10 download, 10 /random e 10 /search al giorno. I download delle cartelle sono premium.\n⭐ Usa /subscribe per accesso illimitato.",
+        "limit_terabox": "⏳ Limite giornaliero raggiunto — {limit} file TeraBox al giorno.\n\nSi azzera tra {reset} alle 12:00 AM IST.\nUsa /subscribe per download illimitati.",
+        "limit_random": "⏳ Limite giornaliero raggiunto — {limit} utilizzi di /random al giorno.\n\nSi azzera tra {reset} alle 12:00 AM IST.\nUsa /subscribe per utilizzo illimitato.",
+        "limit_search": "⏳ Limite giornaliero raggiunto — {limit} utilizzi di /search al giorno.\n\nSi azzera tra {reset} alle 12:00 AM IST.\nUsa /subscribe per utilizzo illimitato.",
+        "quota_left": "📊 Oggi ti restano {remaining} utilizzi gratuiti. Si azzera tra {reset} alle 12:00 AM IST.",
+        "folder_premium": "📁 I download delle cartelle sono una funzione premium.\n\nUsa /subscribe per sbloccare cartelle, download illimitati, /random e /search.",
+    },
+    "ja": {
+        "welcome_plans": "🆓 無料プラン：1日10回のダウンロード、10回の/random、10回の/search。フォルダーのダウンロードはプレミアムです。\n⭐ 無制限にするには /subscribe を使ってください。",
+        "limit_terabox": "⏳ 1日の上限に達しました — 1日{limit}件のTeraBoxファイル。\n\n{reset}後に12:00 AM ISTにリセットされます。\n無制限のダウンロードには /subscribe を使ってください。",
+        "limit_random": "⏳ 1日の上限に達しました — 1日{limit}回の/random。\n\n{reset}後に12:00 AM ISTにリセットされます。\n無制限の利用には /subscribe を使ってください。",
+        "limit_search": "⏳ 1日の上限に達しました — 1日{limit}回の/search。\n\n{reset}後に12:00 AM ISTにリセットされます。\n無制限の利用には /subscribe を使ってください。",
+        "quota_left": "📊 今日は残り{remaining}回無料で利用できます。{reset}後に12:00 AM ISTにリセットされます。",
+        "folder_premium": "📁 フォルダーのダウンロードはプレミアム機能です。\n\nフォルダー、無制限のダウンロード、/random、/searchを利用するには /subscribe を使ってください。",
+    },
+    "ko": {
+        "welcome_plans": "🆓 무료 요금제: 하루 10회 다운로드, 10회 /random, 10회 /search. 폴더 다운로드는 프리미엄입니다.\n⭐ 무제한 이용은 /subscribe를 사용하세요.",
+        "limit_terabox": "⏳ 일일 한도에 도달했습니다 — 하루 {limit}개의 TeraBox 파일.\n\n{reset} 후 12:00 AM IST에 초기화됩니다.\n무제한 다운로드는 /subscribe를 사용하세요.",
+        "limit_random": "⏳ 일일 한도에 도달했습니다 — 하루 {limit}회의 /random.\n\n{reset} 후 12:00 AM IST에 초기화됩니다.\n무제한 이용은 /subscribe를 사용하세요.",
+        "limit_search": "⏳ 일일 한도에 도달했습니다 — 하루 {limit}회의 /search.\n\n{reset} 후 12:00 AM IST에 초기화됩니다.\n무제한 이용은 /subscribe를 사용하세요.",
+        "quota_left": "📊 오늘 무료 이용 {remaining}회 남았습니다. {reset} 후 12:00 AM IST에 초기화됩니다.",
+        "folder_premium": "📁 폴더 다운로드는 프리미엄 기능입니다.\n\n폴더, 무제한 다운로드, /random, /search를 이용하려면 /subscribe를 사용하세요.",
+    },
+    "zh": {
+        "welcome_plans": "🆓 免费额度：每天 10 次下载、10 次 /random 和 10 次 /search。文件夹下载为高级功能。\n⭐ 使用 /subscribe 解锁无限使用。",
+        "limit_terabox": "⏳ 已达每日上限 — 每天 {limit} 个 TeraBox 文件。\n\n将在 {reset} 后于 IST 凌晨 12:00 重置。\n使用 /subscribe 解锁无限下载。",
+        "limit_random": "⏳ 已达每日上限 — 每天 {limit} 次 /random。\n\n将在 {reset} 后于 IST 凌晨 12:00 重置。\n使用 /subscribe 解锁无限使用。",
+        "limit_search": "⏳ 已达每日上限 — 每天 {limit} 次 /search。\n\n将在 {reset} 后于 IST 凌晨 12:00 重置。\n使用 /subscribe 解锁无限使用。",
+        "quota_left": "📊 今天还剩 {remaining} 次免费使用。将在 {reset} 后于 IST 凌晨 12:00 重置。",
+        "folder_premium": "📁 文件夹下载是高级功能。\n\n使用 /subscribe 解锁文件夹、无限下载、/random 和 /search。",
+    },
+}
+
+for _code, _extra in PREMIUM_TRANSLATIONS.items():
+    TRANSLATIONS.setdefault(_code, {}).update(_extra)
 
 
 
