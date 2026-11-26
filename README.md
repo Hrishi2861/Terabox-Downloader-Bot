@@ -7,14 +7,17 @@ Free users get separate daily allowances that reset at **12:00 AM IST**:
 - 10 single-file TeraBox downloads per day
 - 10 `/random` uses per day
 - 10 `/search` uses per day
-- Folder downloads are locked
+- 1 folder download per day, limited to folders with at most 20 files
+
+Folder files do not consume the 10 single-file downloads. Folders with more
+than 20 files are refused for free users. A folder counts against the daily
+allowance only when at least one file is delivered.
 
 Only successful results are counted. Failed downloads are refunded, and
 invalid links or searches with no results never use an allowance. The owner
 bypasses every limit.
 
-Two plans unlock unlimited downloads, folder downloads, `/random` and
-`/search`:
+Two plans unlock unlimited downloads, folders, `/random` and `/search`:
 
 | Plan | Price | Duration | Dump channel |
 | --- | --- | --- | --- |
@@ -26,6 +29,9 @@ Payments are verified manually. Send the payment screenshot to
 
 ## Bot commands
 
+The bot replies only in private chat. All commands and features work in PM;
+groups are ignored completely, except `/user_info` in the premium audit chat.
+
 - `/subscribe` or `/plans` shows the premium plans and payment buttons.
 - `/mystatus` shows your current plan, remaining free uses and reset time.
 - `/random` sends a random indexed file.
@@ -34,7 +40,9 @@ Payments are verified manually. Send the payment screenshot to
   results per page. Inactive search menus expire after 60 seconds.
 - `/dump` displays the available payment methods for permanent dump-channel
   access and sends the selected payment QR.
-- `/user_settings` opens user settings with a `Language/भाषा` button.
+- `/user_settings` opens user settings with a `Language/भाषा` button and
+  shows the current plan (`🆓 Free`, `⭐ Paid` with days remaining, or
+  `💾 Dump Member`).
   It supports 18 languages, each shown in its own native script
   (English, हिन्दी, मराठी, বাংলা, தமிழ், తెలుగు, ಕನ್ನಡ, മലയാളം, اردو,
   ਪੰਜਾਬੀ, ગુજરાતી, Español, Français, Deutsch, Italiano, 日本語, 한국어,
@@ -76,12 +84,12 @@ Payments are verified manually. Send the payment screenshot to
 
 ### Owner commands
 
-Owner-only commands work in any chat. Inside the premium log chat
-(`PREMIUM_INFO_ID`) the bot ignores everything except owner commands that
-explicitly mention the bot username, for example `/user_info@YourBot`. It
-never accepts links or replies to normal messages there.
+Owner-only commands work in PM. The bot ignores every other group, including
+the premium log chat (`PREMIUM_INFO_ID`), with one exception: the owner can
+run `/user_info` there (plain or as `/user_info@YourBot`). It never accepts
+links or replies to normal messages in groups.
 
-- `/user_info@YourBot` lists every premium record grouped into permanent,
+- `/user_info` lists every premium record grouped into permanent,
   active monthly and expired-awaiting-removal, with name, username, user ID,
   DC ID, date of joining, current period start, expiry, remaining time and
   status.
@@ -105,7 +113,7 @@ kept, and the log chat receives one notification with a copy-paste
 - `DUMP_CHAT_ID`: The Dump Channel, all leeched videos will be Forwared Here. (Enter the Channel/Group ID starting with -100). `Int`
 - `USER_SESSION_STRING`: Pyrogram Session String For 4GB Upload, also add this var for better Uploading Speeds. `Str`
 - `DOWNLOAD_API`: Base URL of your Terabox download API, e.g. `http://your-server:8000` (the bot uses `/api` to detect files/folders and `/download?url=...` for single-file streams). `Str`
-- `PREMIUM_INFO_ID`: Numeric chat ID (e.g. `-1001234567890`) of the owner-only premium audit chat. It receives premium activation, renewal, removal and expiry events only. Owner commands there must mention the bot username, e.g. `/user_info@YourBot`. Leave empty to disable premium logs. `Int`
+- `PREMIUM_INFO_ID`: Numeric chat ID (e.g. `-1001234567890`) of the owner-only premium audit chat. It receives premium activation, renewal, removal and expiry events only. It is the only group where the bot replies, and only to the owner's `/user_info`. Leave empty to disable premium logs. `Int`
 - `TELEGRAM_MEDIA_DELAY`: Optional. Minimum seconds between Telegram media sends/copies, defaults to `1.0`. Folder uploads retry automatically on `FloodWait` instead of marking files as failed. `Float`
 
 ---

@@ -7,7 +7,7 @@ import logging
 import math
 from pyrogram import Client, filters, idle, StopPropagation
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, ChatType
 from pyrogram.errors import FloodWait
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -162,6 +162,8 @@ COOLDOWN_SECONDS = 90
 FREE_DAILY_TERABOX = 10
 FREE_DAILY_RANDOM = 10
 FREE_DAILY_SEARCH = 10
+FREE_DAILY_FOLDERS = 1
+FREE_FOLDER_MAX_FILES = 20
 SUBSCRIPTION_DAYS = 30
 
 # Telegram can temporarily rate-limit rapid folder uploads. Keep media sends
@@ -467,13 +469,9 @@ def is_premium(user_id):
     return premium_state(user_id)["active"]
 
 
-def has_folder_access(user_id):
-    return user_id == OWNER_ID or premium_state(user_id)["active"]
-
-
 def get_user_usage(user_id, day=None):
     day = day or ist_today()
-    result = {"terabox": 0, "random": 0, "search": 0}
+    result = {"terabox": 0, "random": 0, "search": 0, "folder": 0}
     if usage_col is None:
         return result
     try:
@@ -502,11 +500,18 @@ def reserve_daily_usage(user_id, kind, limit):
                     "terabox": 0,
                     "random": 0,
                     "search": 0,
+                    "folder": 0,
                 }},
                 upsert=True,
             )
         except DuplicateKeyError:
             pass
+        # Today's document may have been created before the folder counter
+        # existed. Initialise it so the atomic $lt reservation can match.
+        usage_col.update_one(
+            {"_id": key, kind: {"$exists": False}},
+            {"$set": {kind: 0}},
+        )
         result = usage_col.update_one(
             {"_id": key, kind: {"$lt": limit}},
             {"$inc": {kind: 1}},
@@ -535,6 +540,7 @@ def remaining_daily_usage(user_id):
         "terabox": max(0, FREE_DAILY_TERABOX - used["terabox"]),
         "random": max(0, FREE_DAILY_RANDOM - used["random"]),
         "search": max(0, FREE_DAILY_SEARCH - used["search"]),
+        "folder": max(0, FREE_DAILY_FOLDERS - used["folder"]),
         "used": used,
     }
 
@@ -544,13 +550,42 @@ def daily_limit_text(user_id, kind):
         "terabox": "limit_terabox",
         "random": "limit_random",
         "search": "limit_search",
+        "folder": "limit_folder",
     }[kind]
     limit = {
         "terabox": FREE_DAILY_TERABOX,
         "random": FREE_DAILY_RANDOM,
         "search": FREE_DAILY_SEARCH,
+        "folder": FREE_DAILY_FOLDERS,
     }[kind]
-    return t(user_id, key, limit=limit, reset=time_until_reset())
+    return t(
+        user_id, key, limit=limit, reset=time_until_reset(),
+        max=FREE_FOLDER_MAX_FILES,
+    )
+
+
+def days_remaining(expires_at):
+    expiry = to_utc(expires_at)
+    if expiry is None:
+        return 0
+    seconds = (expiry - utcnow()).total_seconds()
+    if seconds <= 0:
+        return 0
+    return max(1, math.ceil(seconds / 86400))
+
+
+def plan_summary(user_id):
+    if user_id == OWNER_ID:
+        return t(user_id, "plan_owner")
+    state = premium_state(user_id)
+    if state["permanent"]:
+        return t(user_id, "plan_dump")
+    if state["active"]:
+        return t(
+            user_id, "plan_paid",
+            days=days_remaining(state["expires_at"]),
+        )
+    return t(user_id, "plan_free")
 
 
 async def send_daily_limit(client, message, user_id, kind):
@@ -629,16 +664,20 @@ async def send_long_html(client, chat_id, text, chunk_size=3800):
 
 
 def parse_addressed_command(text, bot_username):
-    """Return (command, args) only for /command@ThisBot."""
+    """Return (command, args) for /command and /command@ThisBot.
+
+    A command addressed to a different bot is ignored.
+    """
     parts = (text or "").split()
-    if not parts or not bot_username:
+    if not parts:
         return None
     token = parts[0]
-    if not token.startswith("/") or "@" not in token:
+    if not token.startswith("/"):
         return None
-    command, _, target = token[1:].partition("@")
-    if target.lower() != bot_username.lower():
-        return None
+    command, sep, target = token[1:].partition("@")
+    if sep and target:
+        if not bot_username or target.lower() != bot_username.lower():
+            return None
     return command.lower(), parts[1:]
 
 async def delayed_delete(msg, delay):
@@ -784,6 +823,7 @@ async def build_settings_status(client, uid):
         t(uid, "settings_status",
           language=language_name, thumb=thumb_label, dest=dest_label)
         + "\n" + t(uid, "folder_current", mode=folder_label)
+        + "\n" + t(uid, "settings_plan", plan=plan_summary(uid))
     )
 
 def build_settings_menu_keyboard(token):
@@ -1411,12 +1451,6 @@ async def user_settings_callback(client: Client, callback_query):
         return
 
     if action == "folder":
-        if not has_folder_access(uid):
-            await callback_query.answer(
-                "Folder downloads are a premium feature. Use /subscribe to unlock.",
-                show_alert=True
-            )
-            return
         await callback_query.answer()
         try:
             await callback_query.message.edit_text(
@@ -1433,12 +1467,6 @@ async def user_settings_callback(client: Client, callback_query):
         return
 
     if action == "folderset":
-        if not has_folder_access(uid):
-            await callback_query.answer(
-                "Folder downloads are a premium feature. Use /subscribe to unlock.",
-                show_alert=True
-            )
-            return
         mode = parts[3] if len(parts) == 4 else ""
         if mode not in ("zip", "single"):
             await callback_query.answer("Invalid folder mode.", show_alert=True)
@@ -2324,11 +2352,11 @@ async def handle_my_status(client, message):
     if state["permanent"]:
         plan_line = "💾 Permanent dump access"
         expiry_line = "Expires: Never"
-        access_line = "Downloads: Unlimited | Folders: Yes | /random: Unlimited | /search: Unlimited"
+        access_line = "Downloads: Unlimited | Folders: Unlimited | /random: Unlimited | /search: Unlimited"
     elif state["active"]:
         plan_line = "⭐ Monthly subscription"
         expiry_line = f"Expires: {format_ist(state['expires_at'])}"
-        access_line = "Downloads: Unlimited | Folders: Yes | /random: Unlimited | /search: Unlimited"
+        access_line = "Downloads: Unlimited | Folders: Unlimited | /random: Unlimited | /search: Unlimited"
     else:
         plan_line = "🆓 Free tier"
         expiry_line = "Expires: N/A"
@@ -2336,7 +2364,8 @@ async def handle_my_status(client, message):
             f"Downloads: {limits['terabox']}/{FREE_DAILY_TERABOX} left | "
             f"/random: {limits['random']}/{FREE_DAILY_RANDOM} left | "
             f"/search: {limits['search']}/{FREE_DAILY_SEARCH} left | "
-            "Folders: Locked"
+            f"Folders: {limits['folder']}/{FREE_DAILY_FOLDERS} left "
+            f"(max {FREE_FOLDER_MAX_FILES} files)"
         )
 
     await message.reply_text(
@@ -2364,6 +2393,13 @@ async def add_dump(client: Client, message: Message):
 @app.on_message(filters.command("remove"))
 async def remove_premium(client: Client, message: Message):
     await handle_remove_premium(client, message, message.command[1:])
+
+
+@app.on_message(filters.command("user_info"))
+async def user_info_command(client: Client, message: Message):
+    # Works in PM and in the audit chat (the audit chat guard handles the
+    # latter before this handler is reached).
+    await handle_user_info(client, message, message.command[1:])
 
 
 @app.on_message(filters.command("list"))
@@ -2474,10 +2510,14 @@ async def premium_expiry_monitor():
         await asyncio.sleep(300)
 
 
-def _premium_chat_filter(_, __, update):
+def _update_chat(update):
     chat = getattr(update, "chat", None)
     if chat is None:
         chat = getattr(getattr(update, "message", None), "chat", None)
+    return chat
+
+
+def _is_audit_chat(chat):
     return (
         PREMIUM_INFO_ID is not None
         and chat is not None
@@ -2485,41 +2525,63 @@ def _premium_chat_filter(_, __, update):
     )
 
 
-premium_chat_filter = filters.create(_premium_chat_filter)
+def _audit_chat_filter(_, __, update):
+    return _is_audit_chat(_update_chat(update))
 
 
-if PREMIUM_INFO_ID is not None:
-    @app.on_message(premium_chat_filter, group=-1)
-    async def premium_info_guard(client, message):
-        try:
-            if (
-                message.from_user
-                and message.from_user.id == OWNER_ID
-                and message.text
-            ):
-                parsed = parse_addressed_command(
-                    message.text,
-                    client.me.username if client.me else None,
-                )
-                if parsed:
-                    command, args = parsed
-                    if command == "user_info":
-                        await handle_user_info(client, message, args)
-                    elif command == "add":
-                        await handle_add_subscription(client, message, args)
-                    elif command == "adddump":
-                        await handle_add_dump(client, message, args)
-                    elif command == "remove":
-                        await handle_remove_premium(client, message, args)
-                    elif command == "list":
-                        await handle_user_info(client, message, args)
-        except Exception as e:
-            logger.exception(f"Premium chat guard failed: {e}")
-        raise StopPropagation
+def _other_group_message_filter(_, __, message):
+    chat = getattr(message, "chat", None)
+    if chat is None or chat.type == ChatType.PRIVATE:
+        return False
+    return not _is_audit_chat(chat)
 
-    @app.on_callback_query(premium_chat_filter, group=-1)
-    async def premium_info_callback_guard(client, callback_query):
-        raise StopPropagation
+
+def _other_group_callback_filter(_, __, callback_query):
+    chat = getattr(getattr(callback_query, "message", None), "chat", None)
+    if chat is None or chat.type == ChatType.PRIVATE:
+        return False
+    return not _is_audit_chat(chat)
+
+
+audit_chat_filter = filters.create(_audit_chat_filter)
+other_group_message_filter = filters.create(_other_group_message_filter)
+other_group_callback_filter = filters.create(_other_group_callback_filter)
+
+
+# The bot only works in PM. The audit chat is the sole exception and answers
+# only the owner's /user_info. Every other group is completely silent.
+@app.on_message(audit_chat_filter, group=-3)
+async def audit_chat_guard(client, message):
+    try:
+        if (
+            message.from_user
+            and message.from_user.id == OWNER_ID
+            and message.text
+        ):
+            parsed = parse_addressed_command(
+                message.text,
+                client.me.username if client.me else None,
+            )
+            if parsed and parsed[0] == "user_info":
+                await handle_user_info(client, message, parsed[1])
+    except Exception as e:
+        logger.exception(f"Audit chat guard failed: {e}")
+    raise StopPropagation
+
+
+@app.on_message(other_group_message_filter, group=-3)
+async def group_silence_guard(client, message):
+    raise StopPropagation
+
+
+@app.on_callback_query(audit_chat_filter, group=-3)
+async def audit_chat_callback_guard(client, callback_query):
+    raise StopPropagation
+
+
+@app.on_callback_query(other_group_callback_filter, group=-3)
+async def group_callback_silence_guard(client, callback_query):
+    raise StopPropagation
 
 
 async def update_status_message(status_message, text):
@@ -3156,7 +3218,7 @@ async def process_folder_single(client, message, user_id, info, status_message):
     files, skipped = _split_folder_files(info)
     if not files:
         await message.reply_text(t(user_id, "folder_empty"))
-        return
+        return {"sent": 0, "failed": 0, "delivered": False}
 
     total = len(files)
     first_name = message.from_user.first_name or "User"
@@ -3202,7 +3264,7 @@ async def process_folder_single(client, message, user_id, info, status_message):
 
         if not tasks:
             await message.reply_text(t(user_id, "download_failed"))
-            return
+            return {"sent": 0, "failed": failed, "delivered": False}
 
         await update_status_message(
             status_message,
@@ -3275,6 +3337,11 @@ async def process_folder_single(client, message, user_id, info, status_message):
         "sending the folder summary",
     )
     asyncio.create_task(delayed_delete(summary, 600))
+    return {
+        "sent": sent,
+        "failed": failed,
+        "delivered": delivered or bool(user_msgs),
+    }
 
 
 def _zip_part_sort_key(path):
@@ -3422,7 +3489,7 @@ async def process_folder_zip(client, message, user_id, info, status_message):
 
         if not tasks:
             await message.reply_text(t(user_id, "download_failed"))
-            return
+            return {"sent": 0, "failed": failed, "delivered": False}
 
         await update_status_message(
             status_message,
@@ -3468,7 +3535,7 @@ async def process_folder_zip(client, message, user_id, info, status_message):
 
         if not downloaded:
             await message.reply_text(t(user_id, "folder_empty"))
-            return
+            return {"sent": 0, "failed": failed, "delivered": False}
 
         await update_status_message(
             status_message,
@@ -3482,10 +3549,10 @@ async def process_folder_zip(client, message, user_id, info, status_message):
         except Exception as e:
             logger.exception(f"Could not create folder archive: {e}")
             await message.reply_text(t(user_id, "download_failed"))
-            return
+            return {"sent": 0, "failed": failed, "delivered": False}
         if not parts:
             await message.reply_text(t(user_id, "download_failed"))
-            return
+            return {"sent": 0, "failed": failed, "delivered": False}
 
         caption_extra = f"🗜️ {len(downloaded)} files • {format_size(total_bytes)}"
         caption = build_caption(safe_name + ".zip", user_id, first_name, caption_extra)
@@ -3525,6 +3592,11 @@ async def process_folder_zip(client, message, user_id, info, status_message):
             "sending the folder summary",
         )
         asyncio.create_task(delayed_delete(summary, 600))
+        return {
+            "sent": len(user_msgs),
+            "failed": failed,
+            "delivered": delivered or bool(user_msgs),
+        }
     finally:
         for task in tasks:
             if not task.done():
@@ -3613,7 +3685,9 @@ async def handle_message(client: Client, message: Message):
 
     if info.get("isdir") is True:
         privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
-        if not privileged:
+        all_files = info.get("files") or []
+        downloadable, _ = _split_folder_files(info)
+        if not downloadable:
             try:
                 await status_message.delete()
                 await message.delete()
@@ -3621,20 +3695,67 @@ async def handle_message(client: Client, message: Message):
                 pass
             await client.send_message(
                 message.chat.id,
-                t(user_id, "folder_premium"),
-                reply_markup=build_upgrade_keyboard(),
+                t(user_id, "folder_empty"),
                 parse_mode=None,
             )
             return
+
+        reserved_day = None
+        if not privileged:
+            if len(all_files) > FREE_FOLDER_MAX_FILES:
+                try:
+                    await status_message.delete()
+                    await message.delete()
+                except Exception:
+                    pass
+                await client.send_message(
+                    message.chat.id,
+                    t(
+                        user_id, "folder_too_large",
+                        count=len(all_files), max=FREE_FOLDER_MAX_FILES,
+                    ),
+                    reply_markup=build_upgrade_keyboard(),
+                    parse_mode=None,
+                )
+                return
+            reserved, reserved_day = reserve_daily_usage(
+                user_id, "folder", FREE_DAILY_FOLDERS
+            )
+            if reserved is None:
+                try:
+                    await status_message.delete()
+                except Exception:
+                    pass
+                await message.reply_text(t(user_id, "mongo_missing"))
+                return
+            if not reserved:
+                try:
+                    await status_message.delete()
+                    await message.delete()
+                except Exception:
+                    pass
+                await send_daily_limit(client, message, user_id, "folder")
+                return
+
         mode = get_user_setting(user_id, "folder_mode", DEFAULT_FOLDER_MODE)
+        folder_result = None
         try:
             if mode == "zip":
-                await process_folder_zip(client, message, user_id, info, status_message)
+                folder_result = await process_folder_zip(
+                    client, message, user_id, info, status_message
+                )
             else:
-                await process_folder_single(client, message, user_id, info, status_message)
+                folder_result = await process_folder_single(
+                    client, message, user_id, info, status_message
+                )
         except Exception as e:
             logger.exception(f"Folder processing failed: {e}")
+            if reserved_day:
+                refund_daily_usage(user_id, "folder", reserved_day)
             await message.reply_text(t(user_id, "download_failed"))
+        else:
+            if reserved_day and not (folder_result or {}).get("delivered"):
+                refund_daily_usage(user_id, "folder", reserved_day)
     else:
         privileged = user_id == OWNER_ID or premium_state(user_id)["active"]
         reserved_day = None
@@ -3717,9 +3838,67 @@ async def start_indexing():
                 asyncio.create_task(index_new_videos())
             asyncio.create_task(periodic_reindex())
 
+OWNER_MENU_LABEL = "𝗢𝘄𝗻𝗲𝗿 𝗢𝗻𝗹𝘆"
+
+
+def _telegram_api(method, payload):
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/{method}",
+            json=payload,
+            timeout=20,
+        )
+        data = resp.json()
+        if not data.get("ok"):
+            logger.warning(f"{method} failed: {data.get('description')}")
+        return data
+    except Exception as e:
+        logger.warning(f"{method} request failed: {e}")
+        return None
+
+
+def setup_command_menu():
+    """Publish the command menu: full list in PM, /user_info in audit chat."""
+    user_info_command = {
+        "command": "user_info",
+        "description": f"{OWNER_MENU_LABEL} — Show all premium users",
+    }
+    private_commands = [
+        {"command": "start", "description": "Start the Bot"},
+        {"command": "user_settings", "description": "User Specific Settings"},
+        {"command": "random", "description": "Get Random Media from Dump Channel"},
+        {"command": "search", "description": "Search a Video in Dump Channel"},
+        {"command": "dump", "description": "Get Full Permanent Access to Dump Channel"},
+        {"command": "subscribe", "description": "Monthly plan — ₹59 for 30 days"},
+        {"command": "plans", "description": "View all plans and prices"},
+        {"command": "mystatus", "description": "Check your plan and daily limits"},
+        {"command": "cancel", "description": "Cancel a pending input"},
+        {"command": "refresh", "description": f"{OWNER_MENU_LABEL} — Refresh the video index"},
+        user_info_command,
+        {"command": "add", "description": f"{OWNER_MENU_LABEL} — Add/renew a 30-day subscription"},
+        {"command": "adddump", "description": f"{OWNER_MENU_LABEL} — Grant permanent dump access"},
+        {"command": "remove", "description": f"{OWNER_MENU_LABEL} — Remove a user's premium access"},
+        {"command": "list", "description": f"{OWNER_MENU_LABEL} — List premium users"},
+    ]
+    _telegram_api("setMyCommands", {"commands": private_commands})
+    _telegram_api(
+        "setMyCommands",
+        {"commands": [], "scope": {"type": "all_group_chats"}},
+    )
+    if PREMIUM_INFO_ID is not None:
+        _telegram_api(
+            "setMyCommands",
+            {
+                "commands": [user_info_command],
+                "scope": {"type": "chat", "chat_id": PREMIUM_INFO_ID},
+            },
+        )
+
+
 async def run_bot():
     await app.start()
     logger.info("Bot client started!")
+    setup_command_menu()
     asyncio.create_task(premium_expiry_monitor())
     await idle()
     await app.stop()
