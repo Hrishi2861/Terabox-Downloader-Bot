@@ -7,7 +7,7 @@ import logging
 import math
 from pyrogram import Client, filters, idle, StopPropagation
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from pyrogram.enums import ChatMemberStatus, ChatType
+from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
 from pyrogram.errors import FloodWait
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -633,7 +633,7 @@ async def send_premium_log(client, text):
         return False
     try:
         await client.send_message(
-            PREMIUM_INFO_ID, text, parse_mode="html",
+            PREMIUM_INFO_ID, text, parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
         )
         return True
@@ -649,7 +649,7 @@ async def send_long_html(client, chat_id, text, chunk_size=3800):
     for line in lines:
         if length + len(line) + 1 > chunk_size and chunk:
             await client.send_message(
-                chat_id, "\n".join(chunk), parse_mode="html",
+                chat_id, "\n".join(chunk), parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
             )
             chunk = []
@@ -658,7 +658,7 @@ async def send_long_html(client, chat_id, text, chunk_size=3800):
         length += len(line) + 1
     if chunk:
         await client.send_message(
-            chat_id, "\n".join(chunk), parse_mode="html",
+            chat_id, "\n".join(chunk), parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
         )
 
@@ -2134,7 +2134,7 @@ async def handle_add_subscription(client, message, args):
         f"✅ {labels.get(event, 'Subscription updated')} for "
         f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>\n"
         f"Expires: {expires}",
-        parse_mode="html",
+        parse_mode=ParseMode.HTML,
     )
     await _notify_access_user(
         client, target_id,
@@ -2175,7 +2175,7 @@ async def handle_add_dump(client, message, args):
     await message.reply_text(
         f"💾 Permanent dump access granted to "
         f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>.",
-        parse_mode="html",
+        parse_mode=ParseMode.HTML,
     )
     await _notify_access_user(
         client, target_id,
@@ -2217,7 +2217,7 @@ async def handle_remove_premium(client, message, args):
     await message.reply_text(
         f"🗑 Premium record removed for "
         f"<a href='tg://user?id={target_id}'>{escape(str(snapshot.get('name') or 'Unknown'))}</a>.",
-        parse_mode="html",
+        parse_mode=ParseMode.HTML,
     )
     await _notify_access_user(
         client, target_id,
@@ -2375,7 +2375,7 @@ async def handle_my_status(client, message):
         f"{access_line}\n\n"
         f"Daily limits reset in {time_until_reset()} (12:00 AM IST).\n"
         "Use /subscribe to unlock unlimited access.",
-        parse_mode="html",
+        parse_mode=ParseMode.HTML,
         reply_markup=build_upgrade_keyboard() if not state["active"] else None,
     )
 
